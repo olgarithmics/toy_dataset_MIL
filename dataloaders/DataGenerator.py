@@ -6,7 +6,7 @@ from sklearn.metrics import euclidean_distances
 from dataloaders.dataset import get_coordinates
 from dataloaders.data_aug_op import random_flip_img, random_rotate_img
 from multiprocessing import pool
-
+from vaegan_utils.models import _sampling
 
 class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
@@ -120,10 +120,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         for row, column in zip(rows, columns):
 
             values.append(
-                1. - cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
-                           self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
-                           'cosine')[0][0])
-        print (values)
+                cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
+                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
+                           'euclidean')[0][0])
+
+
         return values
 
     def get_knn_affinity(self, Idx):
@@ -172,6 +173,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
 
         affinity[rows, columns] = train_set
+
+        affinity = np.where(affinity > 0, np.exp(-affinity), 0)
+
+        np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

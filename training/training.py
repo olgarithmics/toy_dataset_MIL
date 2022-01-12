@@ -3,7 +3,8 @@ import os
 import re
 import numpy as np
 from sklearn.metrics import roc_auc_score, precision_score, recall_score
-from tensorflow.keras.callbacks import  EarlyStopping,CallbackList
+from tensorflow.keras.callbacks import  EarlyStopping
+from tensorflow.python.keras.callbacks import CallbackList as KerasCallbackList
 from tensorflow.keras.layers import Input,Flatten, Dense, Dropout,Add,Average,LayerNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -139,7 +140,7 @@ class VaeGan:
         fit_models(self.vaegan, models, generators, batch_size=batch_size,
                                steps_per_epoch=steps_per_epoch, callbacks=callbacks,
                                epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.discriminator
+        return self.encoder
 
 
 
@@ -227,6 +228,7 @@ class GraphAttnet:
         file_paths.reverse()
         file_path = (max(file_paths, key=extract_number))
 
+
         discriminator.load_weights(file_path)
         return discriminator
 
@@ -293,7 +295,7 @@ class GraphAttnet:
                                                          verbose=1)
 
         _callbacks = [EarlyStopping(monitor='val_loss', patience=20), cp_callback]
-        callbacks = CallbackList(_callbacks, add_history=True, model=self.net)
+        callbacks = KerasCallbackList(_callbacks, add_history=True, model=self.net)
 
         logs = {}
         callbacks.on_train_begin(logs=logs)
@@ -441,7 +443,7 @@ class GraphAttnet:
 
         return test_loss,test_acc, auc, precision, recall
 
-    def visualize_conv_layer(self,layer_name, data_name, test_img, detection_model, irun, ifold,saved_weights_dir=None,check_dir=None):
+    def visualize_conv_layer(self,layer_name, data_name, test_img, detection_model, irun, ifold,saved_weights_dir=None):
 
 
         if data_name == "colon":
@@ -450,11 +452,11 @@ class GraphAttnet:
             test_set = BreastCancerDataset(format='.tif', patch_size=128,
                                            stride=16, augmentation=False, model=detection_model).load_bags(wsi_paths=test_img)
 
-        if self.mode == "siamese":
+        if self.mode == "vagean":
 
-            self.siamese_net = self.load_siamese( irun, ifold)
+            self.discriminator_test = self.load_siamese( irun, ifold)
             test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
-                                     trained_model=self.siamese_net)
+                                     trained_model=self.discriminator_test )
         else:
             test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
 

@@ -1,0 +1,15 @@
+Untitled.ipynb
+Untitled1.ipynb
+scratch_notebook.ipynb
+/.idea
+/.ipynb_checkpoints
+__pycache__/
+training/__pycache__/
+/results
+/run_files
+/ucsb_results
+/test
+/Saved_model
+/colon_weights
+/cell_segmenation_util/__pycache__
+/heatmaps

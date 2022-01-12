@@ -118,11 +118,11 @@ class VaeGan:
 
         callbacks = [checkpoint, decoder_sampler]
 
-        epochs = 2
+        epochs = 70
 
         seed = np.random.randint(2 ** 32 - 1)
 
-        batch_size = 32
+        batch_size = 128
 
         hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=batch_size, shuffle=True)
         steps_per_epoch = len(hdf5Iterator)

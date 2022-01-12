@@ -26,7 +26,7 @@ def parse_args():
                         default="vaegan_weights", type=str)
     parser.add_argument('--mode', dest='mode',
                         help='select euclidean or siamese or vaegan distance',
-                        choices=["euclidean","siamese","vaegan"],
+                        choices=["euclidean","vaegan"],
                         default="vaegan", type=str)
     parser.add_argument('--save_dir', dest='save_dir',
                         help='directory where the weights of the model are stored',
@@ -45,7 +45,7 @@ def parse_args():
                         default=0.9, type=float)
     parser.add_argument('--epochs', dest='epochs',
                         help='number of epochs to train GRAPH MIL',
-                        default=3, type=int)
+                        default=100, type=int)
     parser.add_argument('--initial_epoch', dest='initial_epoch',
                         help='epoch to start training from (VAEGAN)',
                         default=0, type=int)

@@ -119,7 +119,7 @@ class VaeGan:
 
         callbacks = [checkpoint, decoder_sampler]
 
-        epochs = 70
+        epochs = 100
 
         seed = np.random.randint(2 ** 32 - 1)
 

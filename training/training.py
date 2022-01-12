@@ -359,15 +359,6 @@ class GraphAttnet:
 
         callbacks.on_train_end(logs=logs)
 
-        history_object = None
-        for cb in callbacks:
-            if isinstance(cb, tf.keras.callbacks.History):
-                history_object = cb
-        assert history_object is not None
-
-
-        return history_object
-
     def predict(self,test_bags, detection_model, test_model, irun, ifold):
 
         """

@@ -123,7 +123,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 1. - cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
                            self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
                            'cosine')[0][0])
-
+        print (values)
         return values
 
     def get_knn_affinity(self, Idx):

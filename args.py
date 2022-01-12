@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--save_dir', dest='save_dir',
                         help='directory where the weights of the model are stored',
                         default="Saved_model", type=str)
-    parser.add_argument("--weight_file", default=True,
+    parser.add_argument("--weight_file", default=False,
                         action="store_true",
                         help="true if there is a weight file")
     parser.add_argument('--lr', dest='init_lr',

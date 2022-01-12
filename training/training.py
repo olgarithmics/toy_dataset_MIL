@@ -86,7 +86,7 @@ class VaeGan:
         fake_zp_acc = tf.keras.metrics.BinaryAccuracy(name="fake_z_acc")
         fake_z_acc = tf.keras.metrics.BinaryAccuracy(name="fake_zp_acc")
 
-        rmsprop = RMSprop(lr=0.0003)
+        rmsprop = RMSprop(learning_rate=0.0003)
         set_trainable(self.encoder, False)
         set_trainable(self.decoder, False)
         self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3, [real_acc, fake_z_acc, fake_zp_acc])
@@ -298,7 +298,7 @@ class GraphAttnet:
         logs = {}
         callbacks.on_train_begin(logs=logs)
 
-        optimizer = Adam(lr=self.init_lr, beta_1=0.9, beta_2=0.999)
+        optimizer = Adam(learning_rate=self.init_lr, beta_1=0.9, beta_2=0.999)
         loss_fn = BinaryCrossentropy(from_logits=False)
         train_acc_metric = tf.keras.metrics.BinaryAccuracy()
         val_acc_metric = tf.keras.metrics.BinaryAccuracy()

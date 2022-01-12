@@ -6,11 +6,13 @@ scratch_notebook.ipynb
 /.ipynb_checkpoints
 __pycache__/
 training/__pycache__/
+/Saved_model
+/decode_dir
+/vaegan_weights
 /results
 /run_files
 /ucsb_results
 /test
-/Saved_model
 /colon_weights
 /cell_segmenation_util/__pycache__
 /heatmaps

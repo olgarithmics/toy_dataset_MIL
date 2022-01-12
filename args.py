@@ -45,7 +45,7 @@ def parse_args():
                         default=0.9, type=float)
     parser.add_argument('--epochs', dest='epochs',
                         help='number of epochs to train GRAPH MIL',
-                        default=100, type=int)
+                        default=1, type=int)
     parser.add_argument('--initial_epoch', dest='initial_epoch',
                         help='epoch to start training from (VAEGAN)',
                         default=0, type=int)

@@ -3,7 +3,7 @@ import os
 import re
 import numpy as np
 from sklearn.metrics import roc_auc_score, precision_score, recall_score
-from tensorflow.keras.callbacks import  EarlyStopping
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.python.keras.callbacks import CallbackList as KerasCallbackList
 from tensorflow.keras.layers import Input,Flatten, Dense, Dropout,Add,Average,LayerNormalization
 from tensorflow.keras.models import Model
@@ -172,6 +172,7 @@ class GraphAttnet:
         self.pooling_mode=args.pooling_mode
         self.init_lr=args.init_lr
         self.epochs=args.epochs
+        self.vaegan_save_dir=args.vaegan_save_dir
 
 
         self.inputs = {
@@ -226,7 +227,7 @@ class GraphAttnet:
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        file_paths = glob.glob(os.path.join( "vaegan_weights/irun{}_ifold{}".format(irun, ifold), 'discriminator*'))
+        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'discriminator*'))
         file_paths.reverse()
         file_path = (max(file_paths, key=extract_number))
 
@@ -297,7 +298,7 @@ class GraphAttnet:
                                                          verbose=1)
 
         _callbacks = [EarlyStopping(monitor='val_loss', patience=20), cp_callback]
-        callbacks = KerasCallbackList(_callbacks, add_history=True, model=self.net)
+        callbacks = KerasCallbackList(_callbacks)
 
         logs = {}
         callbacks.on_train_begin(logs=logs)

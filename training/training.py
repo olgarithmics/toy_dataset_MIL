@@ -39,11 +39,13 @@ class VaeGan:
         """
         self.initial_epoch=args.initial_epoch
         self.vaegan_save_dir=args.vaegan_save_dir
+        self.vaegan_lr=args.vaegan_lr
         self.decode_dir=args.decode_dir
+        self.vaegan_epochs=args.vaegan_epochs
+        self.vaegan_batch_size=args.vaegan_batch_size
         self.encoder, self.decoder, self.discriminator = create_models()
 
         self.encoder_train, self.decoder_train, self.discriminator_train, self.vae, self.vaegan = build_graph(self.encoder, self.decoder, self.discriminator)
-
 
         self.epoch_format = '.{epoch:03d}.h5'
 
@@ -87,7 +89,7 @@ class VaeGan:
         fake_zp_acc = tf.keras.metrics.BinaryAccuracy(name="fake_z_acc")
         fake_z_acc = tf.keras.metrics.BinaryAccuracy(name="fake_zp_acc")
 
-        rmsprop = RMSprop(learning_rate=0.0003)
+        rmsprop = RMSprop(learning_rate=self.vaegan_lr)
         set_trainable(self.encoder, False)
         set_trainable(self.decoder, False)
         self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3, [real_acc, fake_z_acc, fake_zp_acc])
@@ -119,11 +121,11 @@ class VaeGan:
 
         callbacks = [checkpoint, decoder_sampler]
 
-        epochs = 70
+        epochs = self.vaegan_epochs
 
         seed = np.random.randint(2 ** 32 - 1)
 
-        batch_size = 128
+        batch_size = self.vaegan_batch_size
 
         hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=batch_size, shuffle=True)
         steps_per_epoch = len(hdf5Iterator)

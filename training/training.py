@@ -3,8 +3,8 @@ import os
 import re
 import numpy as np
 from sklearn.metrics import roc_auc_score, precision_score, recall_score
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
-from tensorflow.python.keras.callbacks import CallbackList as KerasCallbackList
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.python.keras.callbacks import CallbackList
 from tensorflow.keras.layers import Input,Flatten, Dense, Dropout,Add,Average,LayerNormalization
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -298,7 +298,7 @@ class GraphAttnet:
                                                          verbose=1)
 
         _callbacks = [EarlyStopping(monitor='val_loss', patience=20), cp_callback]
-        callbacks = KerasCallbackList(_callbacks)
+        callbacks = CallbackList(_callbacks,add_history=True, model=self.net)
 
         logs = {}
         callbacks.on_train_begin(logs=logs)
@@ -348,8 +348,8 @@ class GraphAttnet:
             for step, (x_batch_val, y_batch_val) in enumerate(val_gen):
                 callbacks.on_batch_begin(step, logs=logs)
                 callbacks.on_test_batch_begin(step, logs=logs)
-                vall_loss = val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
-                logs["val_loss"] = vall_loss
+                val_loss = val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
+                logs["val_loss"] = val_loss
 
                 callbacks.on_test_batch_end(step, logs=logs)
                 callbacks.on_batch_end(step, logs=logs)

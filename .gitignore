@@ -9,6 +9,8 @@ training/__pycache__/
 /Saved_model
 /decode_dir
 /vaegan_weights
+/ColonCancer
+/Breast_Cancer_Cells
 /results
 /run_files
 /ucsb_results

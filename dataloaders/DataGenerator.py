@@ -120,13 +120,12 @@ class DataGenerator(tf.keras.utils.Sequence):
         scaler = MinMaxScaler()
 
 
-
         for row, column in zip(rows, columns):
 
             values.append(
-                1-cdist(scaler.fit_transform((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1)),
+                1-cdist(scaler.fit_transform((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1))),
                            scaler.fit_transform(self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(1, -1),
-                           'euclidean')[0][0])))
+                           'euclidean')[0][0]))
 
         print (values)
         return values

@@ -142,7 +142,7 @@ class VaeGan:
         fit_models(self.vaegan, models, generators, batch_size=batch_size,
                                steps_per_epoch=steps_per_epoch, callbacks=callbacks,
                                epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.encoder
+        return self.discriminator
 
 
 

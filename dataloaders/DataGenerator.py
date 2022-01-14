@@ -117,12 +117,16 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel()
 
+        scaler = MinMaxScaler()
+
+
+
         for row, column in zip(rows, columns):
 
             values.append(
-                cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1),
-                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(1, -1),
-                           'euclidean')[0][0])
+                1-cdist(scaler.fit_transform((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1)),
+                           scaler.fit_transform(self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(1, -1),
+                           'euclidean')[0][0]))
 
         print (values)
         return values
@@ -172,12 +176,8 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
 
-        scaler = MinMaxScaler()
-
-        values=1-scaler.fit_transform(values)
-
         affinity[rows, columns] = values
-        print (values)
+
         # affinity = np.where(affinity > 0, np.exp(-affinity), 0)
         #
         # np.fill_diagonal(affinity, 1)

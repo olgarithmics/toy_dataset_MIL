@@ -6,6 +6,7 @@ from sklearn.metrics import euclidean_distances
 from dataloaders.dataset import get_coordinates
 from dataloaders.data_aug_op import random_flip_img, random_rotate_img
 from multiprocessing import pool
+from sklearn.preprocessing import MinMaxScaler
 
 class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
@@ -148,7 +149,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return affinity
 
-    def get_siamese_affinity(self, Idx, train_set):
+    def get_siamese_affinity(self, Idx, values):
         """
         Create   :    the adjacency matrix of each bag based on the distance scores produced by the siamese network
 
@@ -171,11 +172,15 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
 
-        affinity[rows, columns] = train_set
+        scaler = MinMaxScaler()
 
-        affinity = np.where(affinity > 0, np.exp(-affinity), 0)
+        values=1-scaler.fit_transform(values)
 
-        np.fill_diagonal(affinity, 1)
+        affinity[rows, columns] = values
+        print (values)
+        # affinity = np.where(affinity > 0, np.exp(-affinity), 0)
+        #
+        # np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

@@ -123,11 +123,15 @@ class DataGenerator(tf.keras.utils.Sequence):
         for row, column in zip(rows, columns):
 
             values.append(
-                1-cdist(scaler.fit_transform((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1))),
-                           scaler.fit_transform(self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(1, -1),
-                           'euclidean')[0][0]))
+                cdist((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1)),
+                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
+                           'euclidean')[0][0])
 
-        print (values)
+
+
+        values = [float(i) / max(values) for i in values]
+        values = [1-x for x in values]
+
         return values
 
     def get_knn_affinity(self, Idx):
@@ -175,11 +179,9 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
 
-        affinity[rows, columns] = values
+        affinity[rows, columns] =values
 
-        # affinity = np.where(affinity > 0, np.exp(-affinity), 0)
-        #
-        # np.fill_diagonal(affinity, 1)
+        np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

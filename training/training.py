@@ -142,7 +142,7 @@ class VaeGan:
         fit_models(self.vaegan, models, generators, batch_size=batch_size,
                                steps_per_epoch=steps_per_epoch, callbacks=callbacks,
                                epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.encoder
+        return self.discriminator
 
 
 
@@ -227,13 +227,13 @@ class GraphAttnet:
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'encoder*'))
+        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'discriminator*'))
         file_paths.reverse()
         file_path = (max(file_paths, key=extract_number))
 
 
-        encoder.load_weights(file_path)
-        return encoder
+        discriminator.load_weights(file_path)
+        return discriminator
 
     def train(self,train_bags , irun, ifold,detection_model):
         """

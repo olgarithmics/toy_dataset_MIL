@@ -119,8 +119,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         for row, column in zip(rows, columns):
 
             values.append(
-                cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1),
-                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
+                cdist(self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(1, -1),
+                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(1, -1),
                            'euclidean')[0][0])
 
         print (values)

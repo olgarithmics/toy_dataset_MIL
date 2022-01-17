@@ -186,10 +186,10 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
-        # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
-        #                       name='neigh',
-        #                       use_gated=args.useGated)(self.outputs["bag"])
-        neigh = MultiHeadAttention(d_model=128, num_heads=1)(self.outputs["bag"])
+        neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
+                              name='neigh',
+                              use_gated=args.useGated)(self.outputs["bag"])
+        #neigh = MultiHeadAttention(d_model=128, num_heads=1)(self.outputs["bag"])
 
         alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
 

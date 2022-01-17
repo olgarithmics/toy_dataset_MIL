@@ -592,7 +592,7 @@ class MultiHeadAttention(Layer):
         self.depth = d_model // self.num_heads
         self.wq = tf.keras.layers.Dense(d_model)
         self.wk = tf.keras.layers.Dense(d_model)
-        #self.wv = tf.keras.layers.Dense(d_model)
+        self.wv = tf.keras.layers.Dense(d_model)
         #self.dense = tf.keras.layers.Dense(d_model)
 
 
@@ -600,7 +600,7 @@ class MultiHeadAttention(Layer):
         matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
         dk = tf.cast(tf.shape(k)[-1], tf.float32)
-        scaled_attention_logits = matmul_qk
+        scaled_attention_logits = matmul_qk/dk
         # add the mask to the scaled tensor.
         if mask is not None: scaled_attention_logits += (mask * -1e9)
 
@@ -617,12 +617,14 @@ class MultiHeadAttention(Layer):
 
         self.q=input_tensor
         self.k=input_tensor
+        self.v=input_tensor
         q = self.wq(self.q)  # (batch_size, seq_len, d_model)
-        k = self.wk(self.k)  # (batch_size, seq_len, d_model)
+        k = self.wk(self.k)# (batch_size, seq_len, d_model)
 
         # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
         # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
         attention_weights = self.scaled_dot_product_attention(q, k, mask)
+        tf.print(attention_weights)
 
         return  attention_weights
 

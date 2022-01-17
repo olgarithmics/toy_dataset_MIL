@@ -624,7 +624,7 @@ class MultiHeadAttention(Layer):
         # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
         # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
         attention_weights = self.scaled_dot_product_attention(q, k, mask)
-        tf.print(attention_weights)
+
 
         return  attention_weights
 

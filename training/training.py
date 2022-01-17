@@ -24,7 +24,7 @@ from vaegan_utils.dataloader import encoder_loader, decoder_loader, discriminato
 from vaegan_utils.callbacks import DecoderSnapshot, ModelsCheckpoint
 import tensorflow as tf
 import time
-
+from flushed_print import print
 
 class VaeGan:
     def __init__(self,args):
@@ -189,7 +189,7 @@ class GraphAttnet:
         # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
         #                       name='neigh',
         #                       use_gated=args.useGated)(self.outputs["bag"])
-        neigh = MultiHeadAttention(d_model=256, num_heads=1)(self.outputs["bag"])
+        neigh = MultiHeadAttention(d_model=128, num_heads=1)(self.outputs["bag"])
 
         alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
 

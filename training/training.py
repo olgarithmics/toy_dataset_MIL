@@ -173,12 +173,7 @@ class GraphAttnet:
         self.init_lr=args.init_lr
         self.epochs=args.epochs
         self.vaegan_save_dir=args.vaegan_save_dir
-        self.ffn =Dense(128)
-        self.layernorm1 = LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = LayerNormalization(epsilon=1e-6)
-        self.dropout1 = Dropout(0.1)
-        self.dropout2 = Dropout(0.1)
-
+        self.dist=args.dist
         self.inputs = {
             'bag': Input(self.input_shape),
             'adjacency_matrix': Input(shape=(None,), dtype='float32', name='adjacency_matrix'),
@@ -281,10 +276,10 @@ class GraphAttnet:
                 self.discriminator_test=self.vaegan_net_test.train(model_train_set,model_val_set, irun=irun, ifold=ifold)
 
 
-            train_gen = DataGenerator(batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
+            train_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
                                       trained_model=self.discriminator_test)
 
-            val_gen = DataGenerator(batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
+            val_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
                                     trained_model=self.discriminator_test)
 
         else:

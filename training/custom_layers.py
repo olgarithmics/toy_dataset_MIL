@@ -155,7 +155,7 @@ class NeighborAggregator(Layer):
 
         reduced_mean = tf.math.divide(
             reduced_sum, non_zero_elements, name=None)
-        return reduced_mean
+        return reduced_sum
 
 
     def call(self, input_tensor,mask=None):

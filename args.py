@@ -31,6 +31,10 @@ def parse_args():
                         help='select euclidean or siamese or vaegan distance',
                         choices=["euclidean","vaegan"],
                         default="vaegan", type=str)
+    parser.add_argument('--distance', dest='dist',
+                        help='select euclidean or exp',
+                        choices=["euclidean","exp","log"],
+                        default="euclidean", type=str)
     parser.add_argument('--save_dir', dest='save_dir',
                         help='directory where the weights of the model are stored',
                         default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/Saved_model", type=str)
@@ -107,7 +111,7 @@ def parse_args():
                             {'type': 'Flatten'},
                             {'type': 'relu', 'size': 512},
                             {'type': 'Dropout', 'rate': 0.5},
-                            {'type': 'relu', 'size': 256},
+                            {'type': 'relu', 'size': 512},
                             {'type': 'Dropout', 'rate': 0.5}
                         ])
 

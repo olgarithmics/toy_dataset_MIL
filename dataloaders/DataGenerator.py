@@ -6,11 +6,12 @@ from sklearn.metrics import euclidean_distances
 from dataloaders.dataset import get_coordinates
 from dataloaders.data_aug_op import random_flip_img, random_rotate_img
 from multiprocessing import pool
-from sklearn.preprocessing import MinMaxScaler
+
 
 class DataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
+    def __init__(self, dist,k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
 
+        self.dist=dist
         self.data_set = data_set
         self.shuffle = shuffle
         self.batch_size = batch_size
@@ -26,6 +27,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         thread_pool.join()
 
         self.on_epoch_end()
+
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -65,7 +67,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         bag_label: an np.ndarray of size (number of patches,1) reffering to the label of the image
 
         """
-
         aug_batch = []
         img_data = batch_train[0]
 
@@ -97,7 +98,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return input_batch, adjacency_matrix, batch_train[1]
 
-    def generate_siamese_pairs(self, images, Idx):
+    def generate_siamese_pairs(self, images,Idx):
         """
 
         Parameters
@@ -117,9 +118,6 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel()
 
-        scaler = MinMaxScaler()
-
-
         for row, column in zip(rows, columns):
 
             values.append(
@@ -127,10 +125,12 @@ class DataGenerator(tf.keras.utils.Sequence):
                            self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
                            'euclidean')[0][0])
 
-
-
-        values = [float(i) / max(values) for i in values]
-        values = [1-x for x in values]
+        if self.dist=="euclidean":
+            values=[1/(1+value) for value in values]
+        elif self.dist=="exp":
+            values=[np.exp(-value) for value in values]
+        elif self.dist=="log":
+            values=[np.log((1+value)/(1+tf.keras.backend.epsilon())) for value in values]
 
         return values
 
@@ -179,7 +179,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 enumerate(Idx)]
         rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
 
-        affinity[rows, columns] =values
+        affinity[rows, columns] = values
 
         np.fill_diagonal(affinity, 1)
 
@@ -213,3 +213,4 @@ class DataGenerator(tf.keras.utils.Sequence):
         neighbor_indices = np.argsort(patch_distances, axis=1)[:, :neighbors + 1]
 
         return np.asarray(neighbor_indices)
+

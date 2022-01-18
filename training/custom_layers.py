@@ -582,51 +582,90 @@ class DP_pooling(Layer):
         base_config = super(DP_pooling, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-class MultiHeadAttention(Layer):
-    def __init__(self, d_model, num_heads):
-        super(MultiHeadAttention, self).__init__()
+class NeighborAttention(Layer):
+    def __init__(self, embed_dim, num_heads=1):
+        super(NeighborAttention, self).__init__()
         self.num_heads = num_heads
-        self.d_model = d_model
-
-        assert d_model % self.num_heads == 0
-        self.depth = d_model // self.num_heads
-        self.wq = tf.keras.layers.Dense(d_model)
-        self.wk = tf.keras.layers.Dense(d_model)
-        self.wv = tf.keras.layers.Dense(d_model)
-        #self.dense = tf.keras.layers.Dense(d_model)
+        self.embed_dim = embed_dim
 
 
-    def scaled_dot_product_attention(self, q, k,mask=None):
-        matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
+        self.query_dense = Dense(embed_dim)
+        self.key_dense = Dense(embed_dim)
+        self.value_dense = Dense(embed_dim)
+        self.combine_heads = Dense(embed_dim)
+
+        if embed_dim % num_heads != 0:
+            raise ValueError(
+                f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
+            )
+
+    def attention(self, query, key, value, mask=None):
+        matmul_qk = tf.matmul(query, key, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
-        dk = tf.cast(tf.shape(k)[-1], tf.float32)
+        dk = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_attention_logits = matmul_qk/dk
         # add the mask to the scaled tensor.
-        if mask is not None: scaled_attention_logits += (mask * -1e9)
+        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
+        output = tf.multiply(attention_weights, value)
+        return  output, attention_weights
 
-        return  scaled_attention_logits
-
-    def split_heads(self, x, batch_size):
-        """Split the last dimension into (num_heads, depth).
-        Transpose the result such that the shape is (batch_size, num_heads, seq_len, depth)
-        """
-        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
+    def separate_heads(self, x, batch_size):
+        x = tf.reshape(
+            x, (batch_size, -1, self.num_heads, self.projection_dim)
+        )
         return tf.transpose(x, perm=[0, 2, 1, 3])
 
     def call(self, input_tensor, mask=None):
+            inputs = input_tensor[0]
 
-        self.q=input_tensor
-        self.k=input_tensor
-        self.v=input_tensor
-        q = self.wq(self.q)  # (batch_size, seq_len, d_model)
-        k = self.wk(self.k)# (batch_size, seq_len, d_model)
+            mask = input_tensor[1]
+            # MSA takes the queries, keys, and values  as input from the
+            # previous layer and projects them using the 3 linear layers.
+            query = self.query_dense(inputs)
+            key = self.key_dense(inputs)
+            value = self.value_dense(inputs)
+            # query = self.separate_heads(query, batch_size)
+            # key = self.separate_heads(key, batch_size)
+            # value = self.separate_heads(value, batch_size)
 
-        # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
-        # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
-        attention_weights = self.scaled_dot_product_attention(q, k, mask)
+            output, attention_weights = self.attention(query, key, value, mask=mask)
+            # attention = tf.transpose(attention, perm=[0, 2, 1, 3])
+            # concat_attention = tf.reshape(
+            #     attention, (batch_size, -1, self.embed_dim)
+            # )
+            # # self attention of different heads are concatenated
+            # output = self.combine_heads(concat_attention)
+            return output, attention_weights
 
 
-        return  attention_weights
+
+
+class TransformerBlock(Layer):
+        def __init__(self, embed_dim, training, ff_dim,dropout=0.1):
+            super(TransformerBlock, self).__init__()
+            # Transformer block multi-head Self Attention
+            self.training=training
+            self.multiheadselfattention = NeighborAttention(embed_dim)
+            self.ffn = tf.keras.Sequential(
+                [Dense(ff_dim, activation="relu"), Dense(embed_dim), ]
+            )
+            self.layernorm1 = LayerNormalization(epsilon=1e-6)
+            self.layernorm2 = LayerNormalization(epsilon=1e-6)
+            self.dropout1 = Dropout(dropout)
+            self.dropout2 = Dropout(dropout)
+
+
+        def call(self, input_tensor, mask=None):
+            inputs = input_tensor[0]
+
+            mask = input_tensor[1]
+            out1 = self.layernorm1(inputs)
+            attention_output, attention_weights = self.multiheadselfattention([out1, mask])
+            attention_output = self.dropout1(attention_output, training=self.training)
+            out2 = self.layernorm1(inputs + attention_output)
+            ffn_output = self.ffn(out2)
+            ffn_output = self.dropout2(ffn_output, training=self.training)
+            return self.layernorm2(out2 + ffn_output)
 
 
 

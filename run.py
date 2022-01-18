@@ -12,13 +12,13 @@ def model_training(args,dataset, irun, ifold,detection_model):
     train_bags = dataset['train']
     test_bags = dataset['test']
 
-    net = GraphAttnet(args, useMulGpue=False)
+    net = GraphAttnet(args, training=True,useMulGpue=False)
 
     t1 = time.time()
 
     net.train(train_bags, irun=irun, ifold=ifold,detection_model=detection_model)
 
-    test_net = GraphAttnet(args, useMulGpue=False)
+    test_net = GraphAttnet(args, training=False,useMulGpue=False)
     test_loss,test_acc, recall, precision, auc=test_net.predict(test_bags,detection_model=detection_model,test_model=test_net.model, irun=irun, ifold=ifold)
 
     t2 = time.time()

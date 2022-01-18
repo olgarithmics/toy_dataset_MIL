@@ -11,7 +11,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import l2
 from dataloaders.DataGenerator import DataGenerator
 from tensorflow.keras.optimizers import RMSprop
-from training.custom_layers import NeighborAggregator, Graph_Attention, Last_Sigmoid, MultiHeadAttention,DistanceLayer,multiply, Score_pooling, Feature_pooling, RC_block, DP_pooling
+from training.custom_layers import NeighborAggregator, Graph_Attention, Last_Sigmoid, NeighborAttention,TransformerBlock,DistanceLayer,multiply, Score_pooling, Feature_pooling, RC_block, DP_pooling
 from dataloaders.dataset import Get_train_valid_Path
 from training.metrics import bag_accuracy, bag_loss
 from training.stack_layers import stack_layers, make_layer_list
@@ -147,7 +147,7 @@ class VaeGan:
 
 
 class GraphAttnet:
-    def __init__(self, args, useMulGpue=False):
+    def __init__(self, args,training, useMulGpue=False):
         """
         Build the architercure of the Graph Att net
         Parameters
@@ -158,7 +158,7 @@ class GraphAttnet:
         input_shape:   tuple(int, int, int) of the input shape of the patches
         useMulGpue:    boolean, whether to use multi-gpu processing or not
         """
-
+        self.training=training
         self.args=args
         self.arch=args.arch
         self.mode=args.mode
@@ -190,21 +190,16 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
-        #out1 = self.layernorm1(self.outputs )
 
-        neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
-                              name='neigh',
-                              use_gated=args.useGated)(self.outputs["bag"])
+        # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
+        #                       name='neigh',
+        #                       use_gated=args.useGated)(self.outputs["bag"])
         #neigh = MultiHeadAttention(d_model=128, num_heads=1)(self.outputs["bag"])
 
-        alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
-
-        attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
-
-        # attention_output = self.dropout1(attention_output, training=True)
-        # out2 = self.layernorm1(inputs + attention_output)
-        # ffn_output = self.ffn(out2)
-        # ffn_output = self.dropout2(ffn_output, training=training)
+        # alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
+        #
+        # attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
+        attention_output=TransformerBlock(embed_dim=256, ff_dim=256, training=self.training)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
         out = Last_Sigmoid(output_dim=1, name='FC1_sigmoid',pooling_mode=self.pooling_mode)(attention_output)
 

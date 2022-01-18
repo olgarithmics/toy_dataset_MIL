@@ -89,7 +89,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         Idx = self._get_indices(batch_train[2], neighbors=self.k)
         if self.mode == "vaegan":
 
-            values = self.generate_siamese_pairs(batch_train[0], Idx)
+            values = self.generate_siamese_pairs(batch_train[0], batch_train[2], Idx)
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
@@ -98,7 +98,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return input_batch, adjacency_matrix, batch_train[1]
 
-    def generate_siamese_pairs(self, images,Idx):
+    def generate_siamese_pairs(self, images, filenames,Idx):
         """
 
         Parameters
@@ -120,6 +120,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         for row, column in zip(rows, columns):
 
+
             values.append(
                 cdist((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1)),
                            self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
@@ -130,7 +131,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         elif self.dist=="exp":
             values=[np.exp(-value) for value in values]
         elif self.dist=="log":
-            values=[np.log((1+value)/(1+tf.keras.backend.epsilon())) for value in values]
+            values=[np.log((1+value)/(value+tf.keras.backend.epsilon())) for value in values]
 
         return values
 

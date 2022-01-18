@@ -399,10 +399,10 @@ class GraphAttnet:
 
         if self.mode=="vaegan":
             self.discriminator_test = self.load_siamese(irun, ifold)
-            test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
+            test_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
                                  trained_model=self.discriminator_test)
         else:
-            test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
+            test_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
 
         loss_value=[]
         test_loss_fn = BinaryCrossentropy(from_logits=False)

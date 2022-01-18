@@ -107,7 +107,7 @@ def parse_args():
                             {'type': 'Flatten'},
                             {'type': 'relu', 'size': 512},
                             {'type': 'Dropout', 'rate': 0.5},
-                            {'type': 'relu', 'size': 512},
+                            {'type': 'relu', 'size': 256},
                             {'type': 'Dropout', 'rate': 0.5}
                         ])
 

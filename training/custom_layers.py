@@ -606,8 +606,8 @@ class NeighborAttention(Layer):
         scaled_attention_logits = matmul_qk/dk
         # add the mask to the scaled tensor.
         attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
-        output = tf.multiply(attention_weights, value)
-        return  output, attention_weights
+        attention_output = multiply([attention_weights, value], name="mul")
+        return  attention_output, attention_weights
 
     def separate_heads(self, x, batch_size):
         x = tf.reshape(

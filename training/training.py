@@ -454,14 +454,14 @@ class GraphAttnet:
             test_set = BreastCancerDataset(format='.tif', patch_size=128,
                                            stride=16, augmentation=False, model=detection_model).load_bags(wsi_paths=test_img)
 
-        if self.mode == "vagean":
-
-            self.discriminator_test = self.load_siamese( irun, ifold)
-            test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
-                                     trained_model=self.discriminator_test )
+        if self.mode == "vaegan":
+            self.discriminator_test = self.load_siamese(irun, ifold)
+            test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
+                                     mode=self.mode,
+                                     trained_model=self.discriminator_test)
         else:
-            test_gen = DataGenerator(batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
-
+            test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
+                                     mode=self.mode)
         layer_output = self.net.get_layer(layer_name).output
 
         intermediate_model = Model(inputs=self.net.input, outputs=layer_output)

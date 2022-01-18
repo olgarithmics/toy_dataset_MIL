@@ -190,7 +190,7 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
-        out1 = self.layernorm1(self.outputs )
+        #out1 = self.layernorm1(self.outputs )
 
         neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
                               name='neigh',
@@ -201,12 +201,12 @@ class GraphAttnet:
 
         attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
 
-        attention_output = self.dropout1(attention_output, training=True)
-        out2 = self.layernorm1(inputs + attention_output)
-        ffn_output = self.ffn(out2)
-        ffn_output = self.dropout2(ffn_output, training=training)
+        # attention_output = self.dropout1(attention_output, training=True)
+        # out2 = self.layernorm1(inputs + attention_output)
+        # ffn_output = self.ffn(out2)
+        # ffn_output = self.dropout2(ffn_output, training=training)
 
-        out = Last_Sigmoid(output_dim=1, name='FC1_sigmoid',pooling_mode=self.pooling_mode)(x_mul)
+        out = Last_Sigmoid(output_dim=1, name='FC1_sigmoid',pooling_mode=self.pooling_mode)(attention_output)
 
         self.net = Model(inputs=[self.inputs["bag"], self.inputs["adjacency_matrix"]], outputs=[out])
 

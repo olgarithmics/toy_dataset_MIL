@@ -14,5 +14,5 @@ module load anaconda/3
 source /opt/software/applications/anaconda/3/etc/profile.d/conda.sh
 conda activate alma
 cd /home/ofourkioti/Projects/toy_dataset_MIL/
-python run.py --experiment_name distance_log --mode euclidean --k 5  --input_shape 27 27 3 --extention bmp --data colon  --weight_file --distance log
+python run.py --experiment_name distance_log --mode vaegan --k 5  --input_shape 27 27 3 --extention bmp --data colon  --weight_file --distance log
 

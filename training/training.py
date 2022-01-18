@@ -283,9 +283,9 @@ class GraphAttnet:
                                     trained_model=self.discriminator_test)
 
         else:
-            train_gen = DataGenerator(batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode)
+            train_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode)
 
-            val_gen = DataGenerator(batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode)
+            val_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode)
 
         os.makedirs(self.save_dir, exist_ok=True)
 

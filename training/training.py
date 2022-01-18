@@ -173,7 +173,11 @@ class GraphAttnet:
         self.init_lr=args.init_lr
         self.epochs=args.epochs
         self.vaegan_save_dir=args.vaegan_save_dir
-
+        self.ffn =Dense(128)
+        self.layernorm1 = LayerNormalization(epsilon=1e-6)
+        self.layernorm2 = LayerNormalization(epsilon=1e-6)
+        self.dropout1 = Dropout(0.1)
+        self.dropout2 = Dropout(0.1)
 
         self.inputs = {
             'bag': Input(self.input_shape),
@@ -186,6 +190,8 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
+        out1 = self.layernorm1(self.outputs )
+
         neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
                               name='neigh',
                               use_gated=args.useGated)(self.outputs["bag"])
@@ -193,7 +199,12 @@ class GraphAttnet:
 
         alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
 
-        x_mul = multiply([alpha, self.outputs["bag"]], name="mul")
+        attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
+
+        attention_output = self.dropout1(attention_output, training=True)
+        out2 = self.layernorm1(inputs + attention_output)
+        ffn_output = self.ffn(out2)
+        ffn_output = self.dropout2(ffn_output, training=training)
 
         out = Last_Sigmoid(output_dim=1, name='FC1_sigmoid',pooling_mode=self.pooling_mode)(x_mul)
 
@@ -305,6 +316,8 @@ class GraphAttnet:
 
         optimizer = Adam(learning_rate=self.init_lr, beta_1=0.9, beta_2=0.999)
         loss_fn = BinaryCrossentropy(from_logits=False)
+        train_loss_tracker = tf.keras.metrics.Mean(name="train_loss")
+        val_loss_tracker = tf.keras.metrics.Mean(name="val_loss")
         train_acc_metric = tf.keras.metrics.BinaryAccuracy()
         val_acc_metric = tf.keras.metrics.BinaryAccuracy()
 
@@ -315,15 +328,17 @@ class GraphAttnet:
                 loss_value = loss_fn(y, logits)
             grads = tape.gradient(loss_value, self.net.trainable_weights)
             optimizer.apply_gradients(zip(grads, self.net.trainable_weights))
+            train_loss_tracker.update_state(loss_value)
             train_acc_metric.update_state(y, logits)
-            return loss_value
+            return {"train_loss": train_loss_tracker.result(), "train_accuracy": train_acc_metric.result()}
 
         @tf.function(experimental_relax_shapes=True)
         def val_step(x, y):
             val_logits = self.net(x, training=False)
             val_loss = loss_fn(y, val_logits)
+            val_loss_tracker.update_state(val_loss)
             val_acc_metric.update_state(y, val_logits)
-            return val_loss
+            return {"val_loss": val_loss_tracker.result(), "val_accuracy": val_acc_metric.result()}
 
         for epoch in range(self.epochs):
             print("\nStart of epoch %d" % (epoch,))
@@ -332,30 +347,32 @@ class GraphAttnet:
 
                 callbacks.on_batch_begin(step, logs=logs)
                 callbacks.on_train_batch_begin(step, logs=logs)
-                loss_value = train_step(x_batch_train, np.expand_dims(y_batch_train, axis=0))
+                train_dict = train_step(x_batch_train, np.expand_dims(y_batch_train, axis=0))
 
-                logs["train_loss"] = loss_value
+                logs["train_loss"] = train_dict["train_loss"]
 
                 callbacks.on_train_batch_end(step, logs=logs)
                 callbacks.on_batch_end(step, logs=logs)
                 if step % 20 == 0:
-                    print("Training loss (for one batch) at step %d: %.4f" % (step, float(loss_value)))
+                    print("Training loss at step %d: %.4f" % (step, train_dict["train_loss"]))
 
             train_acc = train_acc_metric.result()
             print("Training acc over epoch: %.4f" % (float(train_acc),))
             train_acc_metric.reset_states()
+            train_loss_tracker.reset_states()
 
             for step, (x_batch_val, y_batch_val) in enumerate(val_gen):
                 callbacks.on_batch_begin(step, logs=logs)
                 callbacks.on_test_batch_begin(step, logs=logs)
-                val_loss = val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
-                logs["val_loss"] = val_loss
+                val_dict = val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
+                logs["val_loss"] = val_dict["val_loss"]
 
                 callbacks.on_test_batch_end(step, logs=logs)
                 callbacks.on_batch_end(step, logs=logs)
 
             val_acc = val_acc_metric.result()
             val_acc_metric.reset_states()
+            val_loss_tracker.reset_states()
             print("Validation acc: %.4f" % (float(val_acc),))
             print("Time taken: %.2fs" % (time.time() - start_time))
             callbacks.on_epoch_end(epoch, logs=logs)

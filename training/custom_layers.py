@@ -592,7 +592,7 @@ class NeighborAttention(Layer):
         self.query_dense = Dense(embed_dim)
         self.key_dense = Dense(embed_dim)
         self.value_dense = Dense(embed_dim)
-        self.combine_heads = Dense(embed_dim)
+
 
         if embed_dim % num_heads != 0:
             raise ValueError(
@@ -604,9 +604,9 @@ class NeighborAttention(Layer):
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_attention_logits = matmul_qk/dk
-        weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
+
         # add the mask to the scaled tensor.
-        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([weights, mask])
+        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
         attention_output = multiply([attention_weights, value], name="mul")
         return  attention_output, attention_weights
 

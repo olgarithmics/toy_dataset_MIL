@@ -98,6 +98,44 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return input_batch, adjacency_matrix, batch_train[1]
 
+    def __kld_gauss(self,m1, s1, m2, s2):
+        # general KL two Gaussians
+        # u2, s2 often N(0,1)
+        # https://stats.stackexchange.com/questions/7440/ +
+        # kl-divergence-between-two-univariate-gaussians
+        # log(s2/s1) + [( s1^2 + (u1-u2)^2 ) / 2*s2^2] - 0.5
+        v1 = s1 * s1
+        v2 = s2 * s2
+        a = np.log(s2 / s1)
+        num = v1 + (m1 - m2) ** 2
+        den = 2 * v2
+        b = num / den
+        return a + b - 0.5
+
+    def __kl_mvn(self,m0, S0, m1, S1):
+        """
+        Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
+        Also computes KL divergence from a single Gaussian pm,pv to a set
+        of Gaussians qm,qv.
+
+
+        From wikipedia
+        KL( (m0, S0) || (m1, S1))
+             = .5 * ( tr(S1^{-1} S0) + log |S1|/|S0| +
+                      (m1 - m0)^T S1^{-1} (m1 - m0) - N )
+        """
+        # store inv diag covariance of S1 and diff between means
+        N = m0.shape[0]
+        iS1 = np.linalg.inv(S1)
+        diff = m1 - m0
+
+        # kl is made of three terms
+        tr_term = np.trace(iS1 @ S0)
+        det_term = np.log(np.linalg.det(S1) / np.linalg.det(S0))  # np.sum(S1) - np.sum(np.log(S0))
+        quad_term = diff.T @iS1  @ diff  # np.sum( (diff*diff) * iS1, axis=1)
+        # print(tr_term,det_term,quad_term)
+        return .5 * (tr_term + det_term + quad_term - N)
+
     def generate_siamese_pairs(self, images, filenames,Idx):
         """
 
@@ -119,19 +157,20 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
+            m1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(-1,1)
+            m2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(-1,1)
+            s1 = self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy()
+            s2 = self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy()
+            cov_1 = np.zeros((s1.shape[1], s1.shape[1]), float)
+            cov_2 = np.zeros((s2.shape[1], s2.shape[1]), float)
+            np.fill_diagonal( cov_1, np.exp(s1.tolist()))
+            np.fill_diagonal( cov_2, np.exp(s2.tolist()))
+            kl_divergence=self.__kl_mvn( m1, cov_1, m2, cov_2)[0][0]
 
+            values.append(kl_divergence)
 
-            values.append(
-                cdist((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1)),
-                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
-                           'euclidean')[0][0])
-
-        if self.dist=="euclidean":
-            values=[1/(1+value) for value in values]
-        elif self.dist=="exp":
-            values=[np.exp(-value) for value in values]
-        elif self.dist=="log":
-            values=[np.log((1+value)/(value+tf.keras.backend.epsilon())) for value in values]
+        values = [float(i) / max(values) for i in values]
+        values = [1-x for x in values]
 
         return values
 

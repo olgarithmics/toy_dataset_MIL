@@ -603,9 +603,10 @@ class NeighborAttention(Layer):
         matmul_qk = tf.matmul(query, key, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
-        scaled_attention_logits = matmul_qk
+        scaled_attention_logits = matmul_qk/dk
+        weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
         # add the mask to the scaled tensor.
-        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
+        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([weights, mask])
         attention_output = multiply([attention_weights, value], name="mul")
         return  attention_output, attention_weights
 

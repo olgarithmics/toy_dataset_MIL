@@ -143,7 +143,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         for row, column in zip(rows, columns):
             m1, s1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)
-            m2,s2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)
+            m2, s2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)
 
 
             # cov_1 = np.zeros((s1.shape[1], s1.shape[1]), float)
@@ -207,7 +207,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        #affinity = np.where(affinity < 0.5,affinity, 0)
+        np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

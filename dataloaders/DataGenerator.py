@@ -18,7 +18,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.trained_model = trained_model
         self.k = k
         self.mode = mode
-        self.mode = mode
         thread_pool = pool.ThreadPool()
         # self.bag_batch, self.neighbors, self.bag_label = self.__data_generation(data_set)
         self.bags, self.neighbors, self.bag_label = zip(*thread_pool.map(self.__data_generation, data_set))
@@ -27,7 +26,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         thread_pool.join()
 
         self.on_epoch_end()
-
 
     def __len__(self):
         'Denotes the number of batches per epoch'
@@ -89,7 +87,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         Idx = self._get_indices(batch_train[2], neighbors=self.k)
         if self.mode == "vaegan":
 
-            values = self.generate_siamese_pairs(batch_train[0], batch_train[2], Idx)
+            values = self.generate_siamese_pairs(batch_train[0], Idx)
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
@@ -98,19 +96,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return input_batch, adjacency_matrix, batch_train[1]
 
-    def __kld_gauss(self,m1, s1, m2, s2):
-        # general KL two Gaussians
-        # u2, s2 often N(0,1)
-        # https://stats.stackexchange.com/questions/7440/ +
-        # kl-divergence-between-two-univariate-gaussians
-        # log(s2/s1) + [( s1^2 + (u1-u2)^2 ) / 2*s2^2] - 0.5
-        v1 = s1 * s1
-        v2 = s2 * s2
-        a = np.log(s2 / s1)
-        num = v1 + (m1 - m2) ** 2
-        den = 2 * v2
-        b = num / den
-        return a + b - 0.5
 
     def __kl_mvn(self,m0, S0, m1, S1):
         """
@@ -136,7 +121,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         # print(tr_term,det_term,quad_term)
         return .5 * (tr_term + det_term + quad_term - N)
 
-    def generate_siamese_pairs(self, images, filenames,Idx):
+    def generate_siamese_pairs(self, images,Idx):
         """
 
         Parameters
@@ -157,17 +142,18 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
-            m1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[0].numpy().reshape(-1,1)
-            m2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[0].numpy().reshape(-1,1)
-            s1 = self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy()
-            s2 = self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy()
-            cov_1 = np.zeros((s1.shape[1], s1.shape[1]), float)
-            cov_2 = np.zeros((s2.shape[1], s2.shape[1]), float)
-            np.fill_diagonal( cov_1, np.exp(s1.tolist()))
-            np.fill_diagonal( cov_2, np.exp(s2.tolist()))
-            kl_divergence=self.__kl_mvn( m1, cov_1, m2, cov_2)[0][0]
+            m1, s1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)
+            m2,s2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)
 
-            values.append(kl_divergence)
+
+            # cov_1 = np.zeros((s1.shape[1], s1.shape[1]), float)
+            # cov_2 = np.zeros((s2.shape[1], s2.shape[1]), float)
+            # np.fill_diagonal( cov_1, np.exp(s1.tolist()))
+            # np.fill_diagonal( cov_2, np.exp(s2.tolist()))
+            # kl_divergence=self.__kl_mvn( m1.numpy().reshape(-1,1), cov_1, m2.numpy().reshape(-1,1), cov_2)[0][0]
+
+            values.append(cdist(m1.numpy().reshape(1, -1),m2.numpy().reshape(1, -1),'euclidean')[0][0])
+
 
         values = [float(i) / max(values) for i in values]
         values = [1-x for x in values]
@@ -221,7 +207,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        np.fill_diagonal(affinity, 1)
+        #affinity = np.where(affinity < 0.5,affinity, 0)
 
         affinity = affinity.astype("float32")
 

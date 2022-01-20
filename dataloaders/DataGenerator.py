@@ -96,7 +96,9 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return input_batch, adjacency_matrix, batch_train[1]
 
-
+    @tf.function
+    def serve(self,x):
+        return self.trained_model(x, training=False)
 
     def generate_siamese_pairs(self, images,filenames,Idx):
         """
@@ -119,8 +121,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
-            m1, s1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)
-            m2, s2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)
+            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
+            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
             value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
             values.append(value)

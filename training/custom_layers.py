@@ -599,7 +599,7 @@ class NeighborAttention(Layer):
                 f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
             )
 
-    def attention(self, query, key, value, mask=None):
+    def attention(self, query, key, mask=None):
         matmul_qk = tf.matmul(query, key, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)

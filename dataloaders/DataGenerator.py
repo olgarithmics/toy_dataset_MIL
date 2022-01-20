@@ -9,9 +9,9 @@ from multiprocessing import pool
 
 
 class DataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, dist,k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
+    def __init__(self, prob,k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
 
-        self.dist=dist
+        self.prob=prob
         self.data_set = data_set
         self.shuffle = shuffle
         self.batch_size = batch_size
@@ -205,7 +205,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         np.fill_diagonal(affinity, 1)
 
-        affinity=np.where(affinity < 0.5, 0, affinity)
+        affinity=np.where(affinity < self.prob, 0, affinity)
 
         affinity = affinity.astype("float32")
 

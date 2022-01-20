@@ -25,6 +25,7 @@ from vaegan_utils.callbacks import DecoderSnapshot, ModelsCheckpoint
 import tensorflow as tf
 import time
 from flushed_print import print
+from multiprocessing import pool
 
 class VaeGan:
     def __init__(self,args):
@@ -159,6 +160,7 @@ class GraphAttnet:
         useMulGpue:    boolean, whether to use multi-gpu processing or not
         """
         self.training=training
+        self.prob = args.prob
         self.args=args
         self.arch=args.arch
         self.mode=args.mode
@@ -267,6 +269,7 @@ class GraphAttnet:
             model_train_set = BreastCancerDataset(format='.tif', patch_size=128,
                                                stride=16, augmentation=True, model=detection_model).load_bags(wsi_paths=train_bags)
 
+
         if self.mode=="vaegan":
             if self.weight_file:
                 self.discriminator_test = self.load_siamese( irun, ifold)
@@ -276,16 +279,17 @@ class GraphAttnet:
                 self.discriminator_test=self.vaegan_net_test.train(model_train_set,model_val_set, irun=irun, ifold=ifold)
 
 
-            train_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
+
+            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
                                       trained_model=self.discriminator_test)
 
-            val_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
+            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
                                     trained_model=self.discriminator_test)
 
         else:
-            train_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode)
+            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode)
 
-            val_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode)
+            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode)
 
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -399,10 +403,10 @@ class GraphAttnet:
 
         if self.mode=="vaegan":
             self.discriminator_test = self.load_siamese(irun, ifold)
-            test_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
+            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
                                  trained_model=self.discriminator_test)
         else:
-            test_gen = DataGenerator(dist=self.dist,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
+            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
 
         loss_value=[]
         test_loss_fn = BinaryCrossentropy(from_logits=False)

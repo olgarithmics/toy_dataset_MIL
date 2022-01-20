@@ -31,10 +31,9 @@ def parse_args():
                         help='select euclidean or siamese or vaegan distance',
                         choices=["euclidean","vaegan"],
                         default="vaegan", type=str)
-    parser.add_argument('--distance', dest='dist',
+    parser.add_argument('--prob', dest='prob',
                         help='select euclidean or exp',
-                        choices=["euclidean","exp","log"],
-                        default="euclidean", type=str)
+                        default=0.5, type=float)
     parser.add_argument('--save_dir', dest='save_dir',
                         help='directory where the weights of the model are stored',
                         default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/Saved_model", type=str)

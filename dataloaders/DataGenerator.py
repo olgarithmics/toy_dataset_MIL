@@ -121,12 +121,11 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
-            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
-            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
-            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
-            values.append(value)
-
+            values.append(
+                cdist((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1)),
+                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
+                           'euclidean')[0][0])
 
         values = [float(i) / max(values) for i in values]
         values = [1-x for x in values]

@@ -143,7 +143,7 @@ class VaeGan:
         fit_models(self.vaegan, models, generators, batch_size=batch_size,
                                steps_per_epoch=steps_per_epoch, callbacks=callbacks,
                                epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.discriminator
+        return self.encoder
 
 
 
@@ -194,7 +194,8 @@ class GraphAttnet:
         # alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
         #
         # attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
-        attention_output, attention_weights = NeighborAttention(embed_dim=128)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
+        attention_weights = NeighborAttention(embed_dim=128)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
+        attention_output = multiply([attention_weights, self.outputs["bag"]], name="mul")
 
         #attention_output=TransformerBlock(embed_dim=256, ff_dim=256, training=self.training)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
@@ -230,13 +231,13 @@ class GraphAttnet:
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'discriminator*'))
+        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'encoder*'))
         file_paths.reverse()
         file_path = (max(file_paths, key=extract_number))
 
 
-        discriminator.load_weights(file_path)
-        return discriminator
+        encoder.load_weights(file_path)
+        return encoder
 
     def train(self,train_bags , irun, ifold,detection_model):
         """

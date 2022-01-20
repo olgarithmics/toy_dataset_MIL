@@ -87,7 +87,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         Idx = self._get_indices(batch_train[2], neighbors=self.k)
         if self.mode == "vaegan":
 
-            values = self.generate_siamese_pairs(batch_train[0], Idx)
+            values = self.generate_siamese_pairs(batch_train[0], batch_train[2],Idx)
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
@@ -97,31 +97,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         return input_batch, adjacency_matrix, batch_train[1]
 
 
-    def __kl_mvn(self,m0, S0, m1, S1):
-        """
-        Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
-        Also computes KL divergence from a single Gaussian pm,pv to a set
-        of Gaussians qm,qv.
 
-
-        From wikipedia
-        KL( (m0, S0) || (m1, S1))
-             = .5 * ( tr(S1^{-1} S0) + log |S1|/|S0| +
-                      (m1 - m0)^T S1^{-1} (m1 - m0) - N )
-        """
-        # store inv diag covariance of S1 and diff between means
-        N = m0.shape[0]
-        iS1 = np.linalg.inv(S1)
-        diff = m1 - m0
-
-        # kl is made of three terms
-        tr_term = np.trace(iS1 @ S0)
-        det_term = np.log(np.linalg.det(S1) / np.linalg.det(S0))  # np.sum(S1) - np.sum(np.log(S0))
-        quad_term = diff.T @iS1  @ diff  # np.sum( (diff*diff) * iS1, axis=1)
-        # print(tr_term,det_term,quad_term)
-        return .5 * (tr_term + det_term + quad_term - N)
-
-    def generate_siamese_pairs(self, images,Idx):
+    def generate_siamese_pairs(self, images,filenames,Idx):
         """
 
         Parameters
@@ -145,14 +122,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             m1, s1=self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)
             m2, s2=self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)
 
-
-            # cov_1 = np.zeros((s1.shape[1], s1.shape[1]), float)
-            # cov_2 = np.zeros((s2.shape[1], s2.shape[1]), float)
-            # np.fill_diagonal( cov_1, np.exp(s1.tolist()))
-            # np.fill_diagonal( cov_2, np.exp(s2.tolist()))
-            # kl_divergence=self.__kl_mvn( m1.numpy().reshape(-1,1), cov_1, m2.numpy().reshape(-1,1), cov_2)[0][0]
-
-            values.append(cdist(m1.numpy().reshape(1, -1),m2.numpy().reshape(1, -1),'euclidean')[0][0])
+            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
+            values.append(value)
 
 
         values = [float(i) / max(values) for i in values]
@@ -181,6 +152,31 @@ class DataGenerator(tf.keras.utils.Sequence):
         affinity[rows, columns] = 1
 
         return affinity
+
+    def kl_mvn(self,m1, s1, m2, s2):
+        """
+        Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
+        Also computes KL divergence from a single Gaussian pm,pv to a set
+        of Gaussians qm,qv.
+
+
+        From wikipedia
+        KL( (m0, S0) || (m1, S1))
+             = .5 * ( tr(S1^{-1} S0) + log |S1|/|S0| +
+                      (m1 - m0)^T S1^{-1} (m1 - m0) - N )
+        """
+        # store inv diag covariance of S1 and diff between means
+        N = m1.shape[0]
+        iS1 = 1 / s2
+        diff = m2 - m1
+
+        # kl is made of three terms
+        tr_term = np.sum((1 / s2) * s1)
+        det_term = np.log(np.prod(s2) / np.prod(s1))
+        quad_term = np.sum((diff * diff) * iS1)
+
+        return .5 * (tr_term + det_term + quad_term - N)
+
 
     def get_siamese_affinity(self, Idx, values):
         """

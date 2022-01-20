@@ -175,7 +175,6 @@ class GraphAttnet:
         self.init_lr=args.init_lr
         self.epochs=args.epochs
         self.vaegan_save_dir=args.vaegan_save_dir
-        self.dist=args.dist
         self.inputs = {
             'bag': Input(self.input_shape),
             'adjacency_matrix': Input(shape=(None,), dtype='float32', name='adjacency_matrix'),
@@ -449,28 +448,28 @@ class GraphAttnet:
 
         return test_loss,test_acc, auc, precision, recall
 
-    def visualize_conv_layer(self,layer_name, data_name, test_img, detection_model, irun, ifold,saved_weights_dir=None):
-
-
-        if data_name == "colon":
-            test_set = ColonCancerDataset(patch_size=27, augmentation=False).load_bags(wsi_paths=[test_img])
-        else:
-            test_set = BreastCancerDataset(format='.tif', patch_size=128,
-                                           stride=16, augmentation=False, model=detection_model).load_bags(wsi_paths=test_img)
-
-        if self.mode == "vaegan":
-            self.discriminator_test = self.load_siamese(irun, ifold)
-            test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
-                                     mode=self.mode,
-                                     trained_model=self.discriminator_test)
-        else:
-            test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
-                                     mode=self.mode)
-        layer_output = self.net.get_layer(layer_name).output
-
-        intermediate_model = Model(inputs=self.net.input, outputs=layer_output)
-        intermediate_model.load_weights(saved_weights_dir, by_name=True)
-
-        intermediate_prediction = intermediate_model.predict_on_batch(test_gen[0][0])
-
-        return intermediate_prediction
+    # def visualize_conv_layer(self,layer_name, data_name, test_img, detection_model, irun, ifold,saved_weights_dir=None):
+    #
+    #
+    #     if data_name == "colon":
+    #         test_set = ColonCancerDataset(patch_size=27, augmentation=False).load_bags(wsi_paths=[test_img])
+    #     else:
+    #         test_set = BreastCancerDataset(format='.tif', patch_size=128,
+    #                                        stride=16, augmentation=False, model=detection_model).load_bags(wsi_paths=test_img)
+    #
+    #     if self.mode == "vaegan":
+    #         self.discriminator_test = self.load_siamese(irun, ifold)
+    #         test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
+    #                                  mode=self.mode,
+    #                                  trained_model=self.discriminator_test)
+    #     else:
+    #         test_gen = DataGenerator(dist=self.dist, batch_size=1, data_set=test_set, k=self.k, shuffle=False,
+    #                                  mode=self.mode)
+    #     layer_output = self.net.get_layer(layer_name).output
+    #
+    #     intermediate_model = Model(inputs=self.net.input, outputs=layer_output)
+    #     intermediate_model.load_weights(saved_weights_dir, by_name=True)
+    #
+    #     intermediate_prediction = intermediate_model.predict_on_batch(test_gen[0][0])
+    #
+    #     return intermediate_prediction

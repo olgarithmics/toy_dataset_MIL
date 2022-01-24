@@ -87,7 +87,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         Idx = self._get_indices(batch_train[2], neighbors=self.k)
         if self.mode == "vaegan":
 
-            values = self.generate_siamese_pairs(batch_train[0], batch_train[2],Idx)
+            values = self.generate_siamese_pairs(batch_train,Idx)
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
@@ -100,7 +100,7 @@ class DataGenerator(tf.keras.utils.Sequence):
     def serve(self,x):
         return self.trained_model(x, training=False)
 
-    def generate_siamese_pairs(self, images,filenames,Idx):
+    def generate_siamese_pairs(self, batch,Idx):
         """
 
         Parameters
@@ -115,6 +115,8 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         values = []
         columns = (np.concatenate(np.asarray(Idx)).ravel())
+        images=batch[0]
+        label=batch[1]
 
         rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
                 enumerate(Idx)]
@@ -122,13 +124,14 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         for row, column in zip(rows, columns):
 
-            values.append(
-                cdist((self.trained_model(np.expand_dims(images[int(row)], axis=0), training=False)[1].numpy().reshape(1, -1)),
-                           self.trained_model(np.expand_dims(images[int(column)], axis=0), training=False)[1].numpy().reshape(1, -1),
-                           'euclidean')[0][0])
+            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
+            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
-        values = [float(i) / max(values) for i in values]
-        values = [1-x for x in values]
+            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
+            values.append(value)
+
+        # values = [float(i) / max(values) for i in values]
+        # values = [1-x for x in values]
 
         return values
 
@@ -206,7 +209,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         np.fill_diagonal(affinity, 1)
 
-        affinity=np.where(affinity < self.prob, 0, affinity)
+        affinity=np.where(affinity < np.mean(values), 0, 1)
 
         affinity = affinity.astype("float32")
 

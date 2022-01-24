@@ -155,7 +155,7 @@ class NeighborAggregator(Layer):
 
         reduced_mean = tf.math.divide(
             reduced_sum, non_zero_elements, name=None)
-        return reduced_sum
+        return reduced_mean
 
 
     def call(self, input_tensor,mask=None):
@@ -599,7 +599,7 @@ class NeighborAttention(Layer):
                 f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
             )
 
-    def attention(self, query, key, mask=None):
+    def attention(self, query, key, value, mask=None):
         matmul_qk = tf.matmul(query, key, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
@@ -607,8 +607,8 @@ class NeighborAttention(Layer):
 
         # add the mask to the scaled tensor.
         attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
-        #attention_output = multiply([attention_weights, value], name="mul")
-        return  attention_weights
+        attention_output = multiply([attention_weights, value], name="mul")
+        return  attention_output, attention_weights
 
     def separate_heads(self, x, batch_size):
         x = tf.reshape(
@@ -624,19 +624,19 @@ class NeighborAttention(Layer):
             # previous layer and projects them using the 3 linear layers.
             query = self.query_dense(inputs)
             key = self.key_dense(inputs)
-            #value = self.value_dense(inputs)
+            value = self.value_dense(inputs)
             # query = self.separate_heads(query, batch_size)
             # key = self.separate_heads(key, batch_size)
             # value = self.separate_heads(value, batch_size)
 
-            attention_weights = self.attention(query, key, mask=mask)
+            output, attention_weights = self.attention(query, key, value, mask=mask)
             # attention = tf.transpose(attention, perm=[0, 2, 1, 3])
             # concat_attention = tf.reshape(
             #     attention, (batch_size, -1, self.embed_dim)
             # )
             # # self attention of different heads are concatenated
             # output = self.combine_heads(concat_attention)
-            return  attention_weights
+            return output, attention_weights
 
 
 

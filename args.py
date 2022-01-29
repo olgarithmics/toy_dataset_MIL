@@ -26,7 +26,7 @@ def parse_args():
                         default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/decode_dir", type=str)
     parser.add_argument('--vaegan_save_dir', dest='vaegan_save_dir',
                         help='directory where the weights of the vaegan model are stored',
-                        default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/vaegan_weights", type=str)
+                        default="vaegan_weights", type=str)
     parser.add_argument('--mode', dest='mode',
                         help='select euclidean or siamese or vaegan distance',
                         choices=["euclidean","vaegan"],
@@ -36,7 +36,7 @@ def parse_args():
                         default=0.5, type=float)
     parser.add_argument('--save_dir', dest='save_dir',
                         help='directory where the weights of the model are stored',
-                        default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/Saved_model", type=str)
+                        default="Saved_model", type=str)
     parser.add_argument("--weight_file", default=False,
                         action="store_true",
                         help="true if there is a weight file")
@@ -52,12 +52,15 @@ def parse_args():
     parser.add_argument('--momentum', dest='momentum',
                         help='momentum',
                         default=0.9, type=float)
+    parser.add_argument('--sigma', dest='sigma',
+                        help='momentum',
+                        default=4, type=float)
     parser.add_argument('--epochs', dest='epochs',
                         help='number of epochs to train GRAPH MIL',
                         default=100, type=int)
     parser.add_argument('--vaegan_epochs', dest='vaegan_epochs',
                         help='number of epochs to train vaegan',
-                        default=70, type=int)
+                        default=30, type=int)
     parser.add_argument('--vaegan_batch_size', dest='vaegan_batch_size',
                         help='batch size to train vaegan',
                         default=128, type=int)

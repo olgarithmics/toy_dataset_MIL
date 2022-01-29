@@ -26,7 +26,7 @@ def parse_args():
                         default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/decode_dir", type=str)
     parser.add_argument('--vaegan_save_dir', dest='vaegan_save_dir',
                         help='directory where the weights of the vaegan model are stored',
-                        default="vaegan_weights", type=str)
+                        default="/data/scratch/DBI/DUDBI/DYNCESYS/OlgaF/toy_datasets/vaegan_weights", type=str)
     parser.add_argument('--mode', dest='mode',
                         help='select euclidean or siamese or vaegan distance',
                         choices=["euclidean","vaegan"],

@@ -125,7 +125,7 @@ class VaeGan:
         # callbacks = [checkpoint, decoder_sampler]
 
         self.vae = VAE(self.encoder, self.decoder)
-        checkpoint_path = os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,self.experiment_name))
+        checkpoint_path = os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold, "vae_weights"))
 
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
 
@@ -251,7 +251,7 @@ class GraphAttnet:
         # file_paths.reverse()
         # file_path = (max(file_paths, key=extract_number))
 
-        file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,self.experiment_name))
+        file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
         encoder.load_weights(file_path)
         return encoder
 

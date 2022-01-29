@@ -6,7 +6,7 @@ from sklearn.metrics import euclidean_distances
 from dataloaders.dataset import get_coordinates
 from dataloaders.data_aug_op import random_flip_img, random_rotate_img
 from multiprocessing import pool
-
+from scipy.spatial import distance
 
 class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, prob,k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
@@ -127,14 +127,13 @@ class DataGenerator(tf.keras.utils.Sequence):
             m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
-            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
+            value=distance.cdist(m1.numpy().reshape(1,-1),m2.numpy().reshape(1,-1))[0][0]
 
             values.append(value)
 
-        values = [float(i) / max(values) for i in values]
-        values = [1-x for x in values]
 
-
+            # values = [float(i) / max(values) for i in values]
+        # values = [1-x for x in values]
         return values
 
     def get_knn_affinity(self, Idx):
@@ -201,17 +200,16 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity = np.zeros((Idx.shape[0], Idx.shape[0]), float)
 
-        columns = (np.concatenate(np.asarray(Idx)).ravel())
+        rows = np.asarray([[enum] * len(item) for enum, item in enumerate(Idx)]).ravel()
 
-        rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
-                enumerate(Idx)]
-        rows = np.concatenate(np.asarray(rows)).ravel().astype(int)
+        columns = Idx.ravel()
 
         affinity[rows, columns] = values
 
-        np.fill_diagonal(affinity, 1)
 
-        affinity=np.where(affinity < np.mean(values), 0, 1)
+        affinity=np.where(affinity >0, np.exp(-affinity), 0)
+
+        np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

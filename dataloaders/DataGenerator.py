@@ -131,7 +131,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             values.append(value)
 
         values = [float(i) / max(values) for i in values]
-        values = [1-x for x in values]
+
         return values
 
     def get_knn_affinity(self, Idx):

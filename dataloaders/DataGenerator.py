@@ -91,6 +91,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
+
         else:
             adjacency_matrix = self.get_knn_affinity(Idx)
 
@@ -116,8 +117,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         values = []
         columns = (np.concatenate(np.asarray(Idx)).ravel())
         images=batch[0]
-        label=batch[1]
-        filenames=batch[2]
+
 
         rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
                 enumerate(Idx)]
@@ -128,12 +128,10 @@ class DataGenerator(tf.keras.utils.Sequence):
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
             value=distance.cdist(m1.numpy().reshape(1,-1),m2.numpy().reshape(1,-1))[0][0]
-
             values.append(value)
 
-
-            # values = [float(i) / max(values) for i in values]
-        # values = [1-x for x in values]
+        values = [float(i) / max(values) for i in values]
+        values = [1-x for x in values]
         return values
 
     def get_knn_affinity(self, Idx):
@@ -182,7 +180,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         return .5 * (tr_term + det_term + quad_term - N)
 
-
     def get_siamese_affinity(self, Idx, values):
         """
         Create   :    the adjacency matrix of each bag based on the distance scores produced by the siamese network
@@ -205,7 +202,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         columns = Idx.ravel()
 
         affinity[rows, columns] = values
-
 
         affinity=np.where(affinity >0, np.exp(-affinity), 0)
 

@@ -9,7 +9,7 @@ from multiprocessing import pool
 from scipy.spatial import distance
 
 class DataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, prob,k, data_set, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
+    def __init__(self, prob,k, data_set,sigma, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
 
         self.prob=prob
         self.data_set = data_set
@@ -17,6 +17,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.batch_size = batch_size
         self.trained_model = trained_model
         self.k = k
+        self.sigma= sigma
         self.mode = mode
         thread_pool = pool.ThreadPool()
         # self.bag_batch, self.neighbors, self.bag_label = self.__data_generation(data_set)
@@ -130,7 +131,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             value=distance.cdist(m1.numpy().reshape(1,-1),m2.numpy().reshape(1,-1))[0][0]
             values.append(value)
 
-        values = [float(i) / max(values) for i in values]
+        #values = [float(i) / max(values) for i in values]
 
         return values
 
@@ -203,7 +204,9 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        affinity=np.where(affinity >0, np.exp(-affinity), 0)
+        affinity=np.where(affinity >0, np.exp(-affinity/self.sigma), 0)
+
+        #affinity = np.where(affinity > self.prob, affinity, 0)
 
         np.fill_diagonal(affinity, 1)
 

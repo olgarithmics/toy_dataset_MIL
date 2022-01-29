@@ -192,6 +192,7 @@ class GraphAttnet:
         self.init_lr=args.init_lr
         self.epochs=args.epochs
         self.vaegan_save_dir=args.vaegan_save_dir
+        self.sigma=args.sigma
         self.inputs = {
             'bag': Input(self.input_shape),
             'adjacency_matrix': Input(shape=(None,), dtype='float32', name='adjacency_matrix'),
@@ -297,15 +298,15 @@ class GraphAttnet:
 
 
             train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
-                                      trained_model=self.discriminator_test)
+                                      trained_model=self.discriminator_test,sigma=self.sigma)
 
             val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
-                                    trained_model=self.discriminator_test)
+                                    trained_model=self.discriminator_test, sigma=self.sigma)
 
         else:
-            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode)
+            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,sigma=self.sigma)
 
-            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode)
+            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,sigma=self.sigma)
 
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -420,9 +421,9 @@ class GraphAttnet:
         if self.mode=="vaegan":
             self.discriminator_test = self.load_siamese(irun, ifold)
             test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
-                                 trained_model=self.discriminator_test)
+                                 trained_model=self.discriminator_test,sigma=self.sigma)
         else:
-            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode)
+            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,sigma=self.sigma)
 
         loss_value=[]
         test_loss_fn = BinaryCrossentropy(from_logits=False)

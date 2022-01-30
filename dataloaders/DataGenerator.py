@@ -128,7 +128,8 @@ class DataGenerator(tf.keras.utils.Sequence):
             m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
 
-            value=distance.cdist(m1.numpy().reshape(1,-1),m2.numpy().reshape(1,-1))[0][0]
+            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
+
             values.append(value)
 
         #values = [float(i) / max(values) for i in values]
@@ -204,7 +205,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        affinity=np.where(affinity >0, np.exp(-affinity/self.sigma), 0)
+        affinity=np.where(affinity >0, np.exp(-affinity), 0)
 
         #affinity = np.where(affinity > self.prob, affinity, 0)
 

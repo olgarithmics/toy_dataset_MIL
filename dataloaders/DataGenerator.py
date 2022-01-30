@@ -146,7 +146,7 @@ class DataGenerator(tf.keras.utils.Sequence):
                 mean_values.append(distance.cdist(m1.numpy().reshape(1, -1), prototype.numpy().reshape(1, -1),"cosine")[0][0])
                 value=np.min(mean_values)
 
-            values.append(value)
+            values.append(1-value)
 
         #values = [float(i) / max(values) for i in values]
         return values

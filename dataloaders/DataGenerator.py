@@ -224,7 +224,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         #affinity = np.where(affinity > self.prob, affinity, 0)
 
-        np.fill_diagonal(affinity, 1)
+        #np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

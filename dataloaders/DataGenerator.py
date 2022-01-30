@@ -7,6 +7,10 @@ from dataloaders.dataset import get_coordinates
 from dataloaders.data_aug_op import random_flip_img, random_rotate_img
 from multiprocessing import pool
 from scipy.spatial import distance
+import glob
+import os
+from PIL import Image
+from dataloaders.data_aug_op import normalize
 
 class DataGenerator(tf.keras.utils.Sequence):
     def __init__(self, prob,k, data_set,sigma, trained_model=None, mode="euclidean", shuffle=True, batch_size=1):
@@ -19,10 +23,21 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.k = k
         self.sigma= sigma
         self.mode = mode
+        self.prototypes = []
+
+        prototype_folder = "prototypes"
+        prototypes = glob.glob(os.path.join(prototype_folder, '*bmp'))
+        for prototype in prototypes:
+            patch = normalize(np.asarray(Image.open(prototype)))
+            patch = np.asarray(patch, dtype=np.float32)
+            patch /= 255
+
+            m3, s3 = self.serve(np.expand_dims(patch, axis=0))
+            self.prototypes.append(m3)
+
         thread_pool = pool.ThreadPool()
         # self.bag_batch, self.neighbors, self.bag_label = self.__data_generation(data_set)
         self.bags, self.neighbors, self.bag_label = zip(*thread_pool.map(self.__data_generation, data_set))
-
         thread_pool.close()
         thread_pool.join()
 
@@ -115,25 +130,25 @@ class DataGenerator(tf.keras.utils.Sequence):
         a list of np.ndarrays, pairing every patch of an image with its closest neighbors
         """
 
-        values = []
         columns = (np.concatenate(np.asarray(Idx)).ravel())
         images=batch[0]
+        filenames=batch[2]
 
 
-        rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
-                enumerate(Idx)]
-        rows = np.concatenate(np.asarray(rows)).ravel()
+        values=[]
+        for column in columns:
+            mean_values=[]
+            for prototype in self.prototypes:
 
-        for row, column in zip(rows, columns):
-            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
-            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
+                m1, s1=  self.serve(np.expand_dims(images[int(column)], axis=0))
 
-            value=self.kl_mvn(m1.numpy().reshape(-1,1),np.exp(s1.numpy().reshape(-1,1)),m2.numpy().reshape(-1,1),np.exp(s2.numpy().reshape(-1,1)))
+
+                mean_values.append(distance.cdist(m1.numpy().reshape(1, -1), prototype.numpy().reshape(1, -1),"cosine")[0][0])
+                value=np.min(mean_values)
 
             values.append(value)
 
         #values = [float(i) / max(values) for i in values]
-
         return values
 
     def get_knn_affinity(self, Idx):
@@ -205,7 +220,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        affinity=np.where(affinity >0, np.exp(-affinity), 0)
+        #affinity=np.where(affinity >0, np.exp(-affinity), 0)
 
         #affinity = np.where(affinity > self.prob, affinity, 0)
 

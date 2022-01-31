@@ -13,4 +13,4 @@ module load anaconda/3
 source /opt/software/applications/anaconda/3/etc/profile.d/conda.sh
 conda activate alma
 cd /home/ofourkioti/Projects/toy_dataset_MIL/
-python run.py --experiment_name siamese_epoch_70 --mode vaegan --k 3  --input_shape 27 27 3 --extention bmp --data colon  --prob 0.75 --weight_file --vaegan_epochs 70
+python run.py --experiment_name siamese_epoch_70 --mode vaegan --k 3  --input_shape 27 27 3 --extention bmp --data colon  --prob 0.75 --vaegan_epochs 70

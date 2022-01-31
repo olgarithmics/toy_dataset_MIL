@@ -23,21 +23,10 @@ class DataGenerator(tf.keras.utils.Sequence):
         self.k = k
         self.sigma= sigma
         self.mode = mode
-        self.prototypes = []
-
-        prototype_folder = "prototypes"
-        prototypes = glob.glob(os.path.join(prototype_folder, '*bmp'))
-        for prototype in prototypes:
-            patch = normalize(np.asarray(Image.open(prototype)))
-            patch = np.asarray(patch, dtype=np.float32)
-            patch /= 255
-
-            m3, s3 = self.serve(np.expand_dims(patch, axis=0))
-            self.prototypes.append(m3)
-
         thread_pool = pool.ThreadPool()
         # self.bag_batch, self.neighbors, self.bag_label = self.__data_generation(data_set)
         self.bags, self.neighbors, self.bag_label = zip(*thread_pool.map(self.__data_generation, data_set))
+
         thread_pool.close()
         thread_pool.join()
 
@@ -134,19 +123,17 @@ class DataGenerator(tf.keras.utils.Sequence):
         images=batch[0]
         filenames=batch[2]
 
-
         values=[]
-        for column in columns:
-            mean_values=[]
-            for prototype in self.prototypes:
 
-                m1, s1=  self.serve(np.expand_dims(images[int(column)], axis=0))
+        rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
+                enumerate(Idx)]
+        rows = np.concatenate(np.asarray(rows)).ravel()
 
+        for row, column in zip(rows, columns):
+            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
+            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
+            values.append(1-distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0])
 
-                mean_values.append(distance.cdist(m1.numpy().reshape(1, -1), prototype.numpy().reshape(1, -1),"cosine")[0][0])
-                value=np.min(mean_values)
-
-            values.append(1-value)
 
         #values = [float(i) / max(values) for i in values]
         return values
@@ -220,7 +207,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        #affinity=np.where(affinity >0, np.exp(-affinity), 0)
+        affinity=np.where(affinity >0, np.exp(affinity), 0)
 
         #affinity = np.where(affinity > self.prob, affinity, 0)
 

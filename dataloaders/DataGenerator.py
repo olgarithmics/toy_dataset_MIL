@@ -96,7 +96,6 @@ class DataGenerator(tf.keras.utils.Sequence):
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
-
         else:
             adjacency_matrix = self.get_knn_affinity(Idx)
 
@@ -122,7 +121,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         columns = (np.concatenate(np.asarray(Idx)).ravel())
         images=batch[0]
         filenames=batch[2]
-
         values=[]
 
         rows = [[enum] * len(item) if isinstance(item, np.ndarray) else np.asarray([enum]) for enum, item in
@@ -132,10 +130,9 @@ class DataGenerator(tf.keras.utils.Sequence):
         for row, column in zip(rows, columns):
             m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
-            value=1-distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
-            values.append(value)
+            value=distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
+            values.append(1-value)
 
-        #values = [float(i) / max(values) for i in values]
         return values
 
     def get_knn_affinity(self, Idx):
@@ -207,7 +204,9 @@ class DataGenerator(tf.keras.utils.Sequence):
 
         affinity[rows, columns] = values
 
-        #np.fill_diagonal(affinity, 1)
+        affinity = np.where(affinity>self.prob, affinity, 0)
+
+        np.fill_diagonal(affinity, 1)
 
         affinity = affinity.astype("float32")
 

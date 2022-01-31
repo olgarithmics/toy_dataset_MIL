@@ -389,7 +389,7 @@ class GraphAttnet:
 
 
             logs["val_loss"] = val_loss_tracker.result()
-            loss_history.append(logs["val_loss"].result())
+            loss_history.append(val_loss_tracker.result())
             val_acc = val_acc_metric.result()
             print("Validation acc: %.4f" % (float(val_acc),))
             print("Time taken: %.2fs" % (time.time() - start_time))

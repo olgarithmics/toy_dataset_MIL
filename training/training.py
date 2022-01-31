@@ -27,6 +27,7 @@ import time
 from flushed_print import print
 from multiprocessing import pool
 from training.custom_layers import VAE
+from collections import deque
 
 class VaeGan:
     def __init__(self,args):
@@ -204,10 +205,9 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
-        # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
-        #                       name='neigh',
-        #                       use_gated=args.useGated)(self.outputs["bag"])
-        neigh = Graph_Attention(d_model=128, num_heads=1)(self.outputs["bag"])
+        neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
+                              name='neigh',
+                              use_gated=args.useGated)(self.outputs["bag"])
 
         alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
 
@@ -352,7 +352,13 @@ class GraphAttnet:
             val_acc_metric.update_state(y, val_logits)
             return {"val_loss": val_loss_tracker.result(), "val_accuracy": val_acc_metric.result()}
 
+        early_stopping=20
+        loss_history = deque(maxlen=early_stopping + 1)
         for epoch in range(self.epochs):
+            train_acc_metric.reset_states()
+            train_loss_tracker.reset_states()
+            val_acc_metric.reset_states()
+            val_loss_tracker.reset_states()
             print("\nStart of epoch %d" % (epoch,))
             start_time = time.time()
             for step, (x_batch_train, y_batch_train) in enumerate(train_gen):
@@ -370,8 +376,7 @@ class GraphAttnet:
 
             train_acc = train_acc_metric.result()
             print("Training acc over epoch: %.4f" % (float(train_acc),))
-            train_acc_metric.reset_states()
-            train_loss_tracker.reset_states()
+
 
             for step, (x_batch_val, y_batch_val) in enumerate(val_gen):
                 callbacks.on_batch_begin(step, logs=logs)
@@ -382,12 +387,18 @@ class GraphAttnet:
                 callbacks.on_test_batch_end(step, logs=logs)
                 callbacks.on_batch_end(step, logs=logs)
 
+            loss_history.append(logs["val_loss"].numpy())
+
             val_acc = val_acc_metric.result()
-            val_acc_metric.reset_states()
-            val_loss_tracker.reset_states()
             print("Validation acc: %.4f" % (float(val_acc),))
             print("Time taken: %.2fs" % (time.time() - start_time))
             callbacks.on_epoch_end(epoch, logs=logs)
+
+            if len(loss_history) > early_stopping:
+                if loss_history.popleft() < min(loss_history):
+                    print(f'\nEarly stopping. No validation loss '
+                          f'improvement in {early_stopping} epochs.')
+                    break
 
         callbacks.on_train_end(logs=logs)
 

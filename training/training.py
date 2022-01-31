@@ -212,7 +212,7 @@ class GraphAttnet:
         alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
 
         attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
-        #attention_output, attention_weights = NeighborAttention(embed_dim=512)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
+        #attention_output, attention_weights = NeighborAttention(embed_dim=256)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
         #attention_output=TransformerBlock(embed_dim=256, ff_dim=256, training=self.training)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 

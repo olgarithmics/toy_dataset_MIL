@@ -205,14 +205,14 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
-        neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
-                              name='neigh',
-                              use_gated=args.useGated)(self.outputs["bag"])
-
-        alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
-
-        attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
-        #attention_output, attention_weights = NeighborAttention(embed_dim=256)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
+        # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
+        #                       name='neigh',
+        #                       use_gated=args.useGated)(self.outputs["bag"])
+        #
+        # alpha = NeighborAggregator(output_dim=1, name="alpha")([neigh, self.inputs["adjacency_matrix"]])
+        #
+        # attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
+        attention_output, attention_weights = NeighborAttention(embed_dim=256)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
         #attention_output=TransformerBlock(embed_dim=256, ff_dim=256, training=self.training)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
@@ -328,8 +328,8 @@ class GraphAttnet:
 
         optimizer = Adam(learning_rate=self.init_lr, beta_1=0.9, beta_2=0.999)
         loss_fn = BinaryCrossentropy(from_logits=False)
-        train_loss_tracker = tf.keras.metrics.Mean(name="train_loss")
-        val_loss_tracker = tf.keras.metrics.Mean(name="val_loss")
+        train_loss_tracker = tf.keras.metrics.Mean()
+        val_loss_tracker = tf.keras.metrics.Mean()
         train_acc_metric = tf.keras.metrics.BinaryAccuracy()
         val_acc_metric = tf.keras.metrics.BinaryAccuracy()
 
@@ -381,14 +381,15 @@ class GraphAttnet:
             for step, (x_batch_val, y_batch_val) in enumerate(val_gen):
                 callbacks.on_batch_begin(step, logs=logs)
                 callbacks.on_test_batch_begin(step, logs=logs)
-                val_dict = val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
-                logs["val_loss"] = val_dict["val_loss"]
+                val_step(x_batch_val, np.expand_dims(y_batch_val, axis=0))
+
 
                 callbacks.on_test_batch_end(step, logs=logs)
                 callbacks.on_batch_end(step, logs=logs)
 
-            loss_history.append(logs["val_loss"].numpy())
 
+            logs["val_loss"] = val_loss_tracker.result()
+            loss_history.append(logs["val_loss"].result())
             val_acc = val_acc_metric.result()
             print("Validation acc: %.4f" % (float(val_acc),))
             print("Time taken: %.2fs" % (time.time() - start_time))

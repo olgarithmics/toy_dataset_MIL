@@ -132,8 +132,8 @@ class DataGenerator(tf.keras.utils.Sequence):
         for row, column in zip(rows, columns):
             m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
-            values.append(1-distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0])
-
+            value=1-distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
+            values.append(value)
 
         #values = [float(i) / max(values) for i in values]
         return values
@@ -206,8 +206,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         columns = Idx.ravel()
 
         affinity[rows, columns] = values
-
-        affinity = np.where(affinity > 0.6, affinity, 0)
 
         #np.fill_diagonal(affinity, 1)
 

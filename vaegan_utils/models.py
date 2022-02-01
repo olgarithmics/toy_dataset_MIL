@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, Dense, Conv2DTranspose, Flatten, Reshape, \
+from tensorflow.keras.layers import Input, Conv2D, BatchNormalization, Dense, Conv2DTranspose, Flatten, Reshape,Dropout ,\
     Lambda, LeakyReLU, Activation,GlobalAveragePooling2D
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.applications.resnet50 import ResNet50
@@ -21,8 +21,13 @@ def create_models(n_channels=3, recon_depth=2, wdecay=1e-5):
     def create_encoder():
 
         inputs = Input(shape=image_shape, name='enc_input')
-        x = Conv2D(filters=32, kernel_size=3, strides=(2, 2), activation="relu")(inputs)
-        x = Conv2D(filters=64, kernel_size=3, strides=(2, 2), activation="relu")(x)
+        x = Conv2D(filters=32, kernel_size=3, strides=(2, 2))(inputs)
+        x = LeakyReLU(alpha=0.2)(x)
+        x = Conv2D(filters=64, kernel_size=3, strides=(2, 2))(x)
+
+        x = LeakyReLU(alpha=0.2)(x)
+        x = BatchNormalization(momentum=0.8)(x)
+
         x = Flatten()(x)
         x = Dense(latent_dim, name='x_mean')(x)
 
@@ -35,8 +40,15 @@ def create_models(n_channels=3, recon_depth=2, wdecay=1e-5):
         Dense(n_decoder, kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform', input_shape=(latent_dim,),
               name='dec_h_dense'),
         Reshape(decode_from_shape),
+
         Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='valid'),
+        LeakyReLU(alpha=0.2),
+        BatchNormalization(momentum=0.8),
+
         Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='valid'),
+        LeakyReLU(alpha=0.2),
+        BatchNormalization(momentum=0.8),
+
         Conv2D(3, 3, activation='tanh', padding='same', kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform',
                name='dec_output')
     ], name='decoder')
@@ -46,8 +58,11 @@ def create_models(n_channels=3, recon_depth=2, wdecay=1e-5):
 
         layers = [
             Conv2D(filters=32, kernel_size=(3, 3), strides=2, padding='valid'),
+            LeakyReLU(alpha=0.2),
 
             Conv2D(filters=64, kernel_size=(3, 3), strides=2, padding='valid'),
+            LeakyReLU(alpha=0.2),
+            Dropout(0.5),
 
             Flatten(),
             Dense(n_discriminator, kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform', name='dis_dense'),

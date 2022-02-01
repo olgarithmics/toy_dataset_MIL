@@ -48,6 +48,7 @@ class VaeGan:
         self.vaegan_batch_size=args.vaegan_batch_size
         self.encoder, self.decoder, self.discriminator = create_models()
         self.experiment_name=args.experiment_name
+        self.seed=args.seed_value
 
         self.encoder_train, self.decoder_train, self.discriminator_train, self.vae, self.vaegan = build_graph(self.encoder, self.decoder, self.discriminator)
 
@@ -89,30 +90,32 @@ class VaeGan:
             for layer in model.layers:
                 layer.trainable = trainable
 
-        # real_acc = tf.keras.metrics.BinaryAccuracy(name="real_acc")
-        # fake_zp_acc = tf.keras.metrics.BinaryAccuracy(name="fake_z_acc")
-        # fake_z_acc = tf.keras.metrics.BinaryAccuracy(name="fake_zp_acc")
-        #
-        # rmsprop = RMSprop(learning_rate=self.vaegan_lr)
-        # set_trainable(self.encoder, False)
-        # set_trainable(self.decoder, False)
-        # self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3, [real_acc, fake_z_acc, fake_zp_acc])
-        # self.discriminator_train.summary()
-        #
-        # decoder_z_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_z_acc")
-        # decoder_zp_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_zp_acc")
-        #
-        # set_trainable(self.discriminator, False)
-        # set_trainable(self.decoder, True)
-        # self.decoder_train.compile(rmsprop, ['binary_crossentropy'] * 2, [decoder_z_acc, decoder_zp_acc])
-        # self.decoder_train.summary()
-        #
-        # set_trainable(self.decoder, False)
-        # set_trainable(self.encoder, True)
-        # self.encoder_train.compile(rmsprop)
-        # self.encoder_train.summary()
-        #
-        # set_trainable(self.vaegan, True)
+        real_acc = tf.keras.metrics.BinaryAccuracy(name="real_acc")
+        fake_zp_acc = tf.keras.metrics.BinaryAccuracy(name="fake_z_acc")
+        fake_z_acc = tf.keras.metrics.BinaryAccuracy(name="fake_zp_acc")
+
+        rmsprop = RMSprop(learning_rate=self.vaegan_lr)
+        # gen_optimizer = tf.keras.optimizers.Adam(0.0003, beta_1=0.5)
+        # disc_optimizer = tf.keras.optimizers.RMSprop(0.0003)
+        set_trainable(self.encoder, False)
+        set_trainable(self.decoder, False)
+        self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3, [real_acc, fake_z_acc, fake_zp_acc])
+        self.discriminator_train.summary()
+
+        decoder_z_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_z_acc")
+        decoder_zp_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_zp_acc")
+
+        set_trainable(self.discriminator, False)
+        set_trainable(self.decoder, True)
+        self.decoder_train.compile(rmsprop, ['binary_crossentropy'] * 2, [decoder_z_acc, decoder_zp_acc])
+        self.decoder_train.summary()
+
+        set_trainable(self.decoder, False)
+        set_trainable(self.encoder, True)
+        self.encoder_train.compile(rmsprop)
+        self.encoder_train.summary()
+
+        set_trainable(self.vaegan, True)
 
         try:
             os.makedirs("{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), exist_ok=True)
@@ -120,48 +123,48 @@ class VaeGan:
         except OSError as error:
             print("Directory '%s' can not be created")
 
-        # checkpoint = ModelsCheckpoint("{}/irun{}_ifold{}/".format(self.vaegan_save_dir,irun, ifold), self.epoch_format,self.encoder, self.decoder, self.discriminator)
-        # decoder_sampler = DecoderSnapshot("{}/".format(self.decode_dir))
+        checkpoint = ModelsCheckpoint("{}/irun{}_ifold{}/".format(self.vaegan_save_dir,irun, ifold), self.epoch_format,self.encoder, self.decoder, self.discriminator)
+        decoder_sampler = DecoderSnapshot("{}/".format(self.decode_dir))
+
+        _callbacks = [checkpoint, decoder_sampler]
+
+        #self.vae = VAE(self.encoder, self.decoder)
+        # checkpoint_path = os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold, "vae_weights"))
         #
-        # callbacks = [checkpoint, decoder_sampler]
+        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+        #
+        #                                                  monitor='loss',
+        #                                                  save_weights_only=True,
+        #                                                  save_best_only=True,
+        #                                                  mode='auto',
+        #                                                  save_freq='epoch',
+        #                                                  verbose=1)
 
-        self.vae = VAE(self.encoder, self.decoder)
-        checkpoint_path = os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold, "vae_weights"))
-
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-
-                                                         monitor='loss',
-                                                         save_weights_only=True,
-                                                         save_best_only=True,
-                                                         mode='auto',
-                                                         save_freq='epoch',
-                                                         verbose=1)
-
-        callbacks = CallbackList(cp_callback, add_history=True, model=self.vae.encoder)
+        #callbacks = CallbackList(_callbacks, add_history=True, model=self.encoder)
 
         epochs = self.vaegan_epochs
 
         hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=self.vaegan_batch_size, shuffle=True)
 
 
-        self.vae.compile(optimizer=tf.keras.optimizers.Adam())
-        self.vae.fit(hdf5Iterator, epochs=epochs, batch_size=self.vaegan_batch_size, callbacks=callbacks)
+        # self.vae.compile(optimizer=tf.keras.optimizers.Adam())
+        # self.vae.fit(hdf5Iterator, epochs=epochs, batch_size=self.vaegan_batch_size, callbacks=callbacks)
 
-        # steps_per_epoch = len(hdf5Iterator)
-        # img_loader = load_images(hdf5Iterator, num_child=3)
-        #
-        # dis_loader = discriminator_loader(img_loader, seed=seed)
-        # dec_loader = decoder_loader(img_loader, seed=seed)
-        # enc_loader = encoder_loader(img_loader)
-        #
-        # models = [self.discriminator_train, self.decoder_train, self.encoder_train]
-        #
-        # generators = [dis_loader, dec_loader, enc_loader]
-        #
-        # fit_models(self.vaegan, models, generators, batch_size=batch_size,
-        #                        steps_per_epoch=steps_per_epoch, callbacks=callbacks,
-        #                        epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.vae.encoder
+        steps_per_epoch = len(hdf5Iterator)
+        img_loader = load_images(hdf5Iterator, num_child=3)
+
+        dis_loader = discriminator_loader(img_loader, seed=self.seed)
+        dec_loader = decoder_loader(img_loader, seed=self.seed)
+        enc_loader = encoder_loader(img_loader)
+
+        models = [self.discriminator_train, self.decoder_train, self.encoder_train]
+
+        generators = [dis_loader, dec_loader, enc_loader]
+
+        fit_models(self.vaegan, models, generators, batch_size=self.vaegan_batch_size,
+                               steps_per_epoch=steps_per_epoch, callbacks=_callbacks,
+                               epochs=epochs, initial_epoch=self.initial_epoch)
+        return self.encoder
 
 
 
@@ -248,11 +251,11 @@ class GraphAttnet:
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        # file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'encoder*'))
-        # file_paths.reverse()
-        # file_path = (max(file_paths, key=extract_number))
+        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'encoder*'))
+        file_paths.reverse()
+        file_path = (max(file_paths, key=extract_number))
 
-        file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
+        #file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
         encoder.load_weights(file_path)
         return encoder
 

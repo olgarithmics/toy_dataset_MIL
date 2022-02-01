@@ -105,7 +105,6 @@ class Graph_Attention(Layer):
 
         data_input = K.tanh(data_input)
 
-
         return data_input
 
     def get_config(self):
@@ -163,7 +162,8 @@ class NeighborAggregator(Layer):
 
         adj_matrix=input_tensor[1]
 
-        data_input = multiply([adj_matrix, data_input])
+        data_input =  multiply([adj_matrix,data_input])
+
 
         non_zero_elements = tf.cast(tf.math.count_nonzero(adj_matrix, 1), tf.float32)
 
@@ -602,10 +602,16 @@ class NeighborAttention(Layer):
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
         scaled_attention_logits = matmul_qk/dk
+        #weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
 
         # add the mask to the scaled tensor.
-        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
-        attention_output = multiply([attention_weights, value], name="mul")
+        neighbor_embedding = multiply([mask, scaled_attention_logits])
+        attention_weights = tf.nn.softmax(neighbor_embedding, axis=-1)
+        # Attention(Q, K, V ) = softmax[(QK)/√dim_key]V
+
+
+        #attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
+        attention_output = tf.matmul(attention_weights, value)
         return  attention_output, attention_weights
 
     def separate_heads(self, x, batch_size):
@@ -628,6 +634,7 @@ class NeighborAttention(Layer):
             # value = self.separate_heads(value, batch_size)
 
             output, attention_weights = self.attention(query, key, value, mask=mask)
+
             # attention = tf.transpose(attention, perm=[0, 2, 1, 3])
             # concat_attention = tf.reshape(
             #     attention, (batch_size, -1, self.embed_dim)

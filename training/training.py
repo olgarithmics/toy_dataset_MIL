@@ -28,6 +28,7 @@ from flushed_print import print
 from multiprocessing import pool
 from training.custom_layers import VAE
 from collections import deque
+from training.pooling_method import choice_pooling
 
 class VaeGan:
     def __init__(self,args):
@@ -208,6 +209,7 @@ class GraphAttnet:
 
         self.outputs = stack_layers(self.inputs, self.layers)
 
+
         # neigh = Graph_Attention(L_dim=128, output_dim=1, kernel_regularizer=l2(self.weight_decay),
         #                       name='neigh',
         #                       use_gated=args.useGated)(self.outputs["bag"])
@@ -217,9 +219,12 @@ class GraphAttnet:
         # attention_output = multiply([alpha, self.outputs["bag"]], name="mul")
         attention_output, attention_weights = NeighborAttention(embed_dim=256)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
 
-        #attention_output=TransformerBlock(embed_dim=256, ff_dim=256, training=self.training)([self.outputs["bag"], self.inputs["adjacency_matrix"]])
+        #attention_output=TransformerBlock(embed_dim=128, ff_dim=128, training=self.training)([x, self.inputs["adjacency_matrix"]])
 
         out = Last_Sigmoid(output_dim=1, name='FC1_sigmoid',pooling_mode=self.pooling_mode)(attention_output)
+
+        # out = Dense(1, activation='sigmoid', kernel_regularizer=l2(args.weight_decay))(attention_output)
+        # output = choice_pooling(out, self.pooling_mode)
 
         self.net = Model(inputs=[self.inputs["bag"], self.inputs["adjacency_matrix"]], outputs=[out])
 

@@ -3,6 +3,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import initializers, regularizers
 from tensorflow.keras.layers import Layer, multiply,LayerNormalization, Add, Dense, Dropout
 import training.pooling_method as pooling
+import numpy as np
 
 class Graph_Attention(Layer):
     """
@@ -597,18 +598,32 @@ class NeighborAttention(Layer):
                 f"embedding dimension = {embed_dim} should be divisible by number of heads = {num_heads}"
             )
 
+    def sparse_softmax(self,T):
+        # Creating partition based on condition:
+        condition_mask = tf.cast(tf.greater(T, 0.), tf.int32)
+        partitioned_T = tf.dynamic_partition(T, condition_mask, 2)
+        # Applying the operation to the target partition:
+        partitioned_T[1] = tf.nn.softmax(partitioned_T[1])
+
+        # Stitching back together, flattening T and its indices to make things easier::
+        condition_indices = tf.dynamic_partition(tf.range(tf.size(T)), tf.reshape(condition_mask, [-1]), 2)
+        res_T = tf.dynamic_stitch(condition_indices, partitioned_T)
+        res_T = tf.reshape(res_T, tf.shape(T))
+
+        return res_T
+
     def attention(self, query, key, value, mask=None):
         matmul_qk = tf.matmul(query, key, transpose_b=True)  # (..., seq_len_q, seq_len_k)
         # scale matmul_qk
         dk = tf.cast(tf.shape(key)[-1], tf.float32)
-        scaled_attention_logits = matmul_qk/dk
+        scaled_attention_logits = matmul_qk/ tf.math.sqrt(dk)
         #weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
 
         # add the mask to the scaled tensor.
         neighbor_embedding = multiply([mask, scaled_attention_logits])
-        attention_weights = tf.nn.softmax(neighbor_embedding, axis=-1)
-        # Attention(Q, K, V ) = softmax[(QK)/√dim_key]V
 
+        mask = tf.not_equal(neighbor_embedding, 0.)
+        attention_weights = tf.keras.layers.Softmax()(neighbor_embedding, mask=mask)
 
         #attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
         attention_output = tf.matmul(attention_weights, value)

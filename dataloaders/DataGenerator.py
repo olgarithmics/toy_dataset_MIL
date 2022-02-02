@@ -131,6 +131,7 @@ class DataGenerator(tf.keras.utils.Sequence):
             m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
             m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
             value=distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
+
             values.append(1-value)
 
         return values

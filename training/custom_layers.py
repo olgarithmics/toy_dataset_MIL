@@ -620,13 +620,13 @@ class NeighborAttention(Layer):
         #weights = tf.nn.softmax(scaled_attention_logits, axis=-1)
 
         # add the mask to the scaled tensor.
-        neighbor_embedding = multiply([mask, scaled_attention_logits])
+        # neighbor_embedding = multiply([mask, scaled_attention_logits])
 
-        mask = tf.not_equal(neighbor_embedding, 0.)
-        attention_weights = tf.keras.layers.Softmax()(neighbor_embedding, mask=mask)
+        # mask = tf.not_equal(neighbor_embedding, 0.)
+        # attention_weights = tf.keras.layers.Softmax()(neighbor_embedding, mask=mask)
 
-        #attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
-        attention_output = tf.matmul(attention_weights, value)
+        attention_weights = NeighborAggregator(output_dim=1, name="alpha")([scaled_attention_logits, mask])
+        attention_output = multiply([attention_weights, value])
         return  attention_output, attention_weights
 
     def separate_heads(self, x, batch_size):
@@ -746,6 +746,8 @@ class VAE(tf.keras.Model):
         z_mean, z_log_var = self.encoder(inputs)
         z=self.sampling([z_mean, z_log_var])
         return self.decoder(z)
+
+
 
 
 

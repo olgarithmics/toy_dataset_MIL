@@ -29,6 +29,9 @@ from multiprocessing import pool
 from training.custom_layers import VAE
 from collections import deque
 from training.pooling_method import choice_pooling
+from InfoGan.INFOGAN import INFOGAN
+
+import matplotlib.pyplot as plt
 
 class VaeGan:
     def __init__(self,args):
@@ -50,8 +53,9 @@ class VaeGan:
         self.encoder, self.decoder, self.discriminator = create_models()
         self.experiment_name=args.experiment_name
         self.seed=args.seed_value
+        self.input_shape = tuple(args.input_shape)
 
-        self.encoder_train, self.decoder_train, self.discriminator_train, self.vae, self.vaegan = build_graph(self.encoder, self.decoder, self.discriminator)
+        #self.encoder_train, self.decoder_train, self.discriminator_train, self.vae, self.vaegan = build_graph(self.encoder, self.decoder, self.discriminator)
 
         self.epoch_format = '.{epoch:03d}.h5'
 
@@ -64,6 +68,23 @@ class VaeGan:
             self.encoder.load_weights('encoder' + suffix)
             self.decoder.load_weights('decoder' + suffix)
             self.discriminator.load_weights('discriminator' + suffix)
+
+    def sample_interval(self, epoch):
+        r, c = 5, 5
+        z = np.random.normal(size=(25, 256))
+        gen_imgs = self.decoder.predict(z)
+
+        gen_imgs = 0.5 * gen_imgs + 0.5
+
+        fig, axs = plt.subplots(r, c)
+        cnt = 0
+        for i in range(r):
+            for j in range(c):
+                axs[i, j].imshow(gen_imgs[cnt, :, :, 0], cmap='gray')
+                axs[i, j].axis('off')
+                cnt += 1
+        fig.savefig("decode_dir/figure_%d.png" % epoch)
+        plt.close()
 
 
     def train(self, train_bags,val_bags, irun, ifold):
@@ -91,32 +112,24 @@ class VaeGan:
             for layer in model.layers:
                 layer.trainable = trainable
 
-        real_acc = tf.keras.metrics.BinaryAccuracy(name="real_acc")
-        fake_zp_acc = tf.keras.metrics.BinaryAccuracy(name="fake_z_acc")
-        fake_z_acc = tf.keras.metrics.BinaryAccuracy(name="fake_zp_acc")
 
-        rmsprop = RMSprop(learning_rate=self.vaegan_lr)
-        # gen_optimizer = tf.keras.optimizers.Adam(0.0003, beta_1=0.5)
-        # disc_optimizer = tf.keras.optimizers.RMSprop(0.0003)
-        set_trainable(self.encoder, False)
-        set_trainable(self.decoder, False)
-        self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3, [real_acc, fake_z_acc, fake_zp_acc])
-        self.discriminator_train.summary()
+        # rmsprop = RMSprop(learning_rate=self.vaegan_lr)
+        # set_trainable(self.encoder, False)
+        # set_trainable(self.decoder, False)
+        # self.discriminator_train.compile(rmsprop, ['binary_crossentropy'] * 3)
+        # self.discriminator_train.summary()
+        #
+        # set_trainable(self.discriminator, False)
+        # set_trainable(self.decoder, True)
+        # self.decoder_train.compile(rmsprop, ['binary_crossentropy'] * 2)
+        # self.decoder_train.summary()
+        #
+        # set_trainable(self.decoder, False)
+        # set_trainable(self.encoder, True)
+        # self.encoder_train.compile(rmsprop)
+        # self.encoder_train.summary()
 
-        decoder_z_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_z_acc")
-        decoder_zp_acc = tf.keras.metrics.BinaryAccuracy(name="decoder_zp_acc")
-
-        set_trainable(self.discriminator, False)
-        set_trainable(self.decoder, True)
-        self.decoder_train.compile(rmsprop, ['binary_crossentropy'] * 2, [decoder_z_acc, decoder_zp_acc])
-        self.decoder_train.summary()
-
-        set_trainable(self.decoder, False)
-        set_trainable(self.encoder, True)
-        self.encoder_train.compile(rmsprop)
-        self.encoder_train.summary()
-
-        set_trainable(self.vaegan, True)
+        #set_trainable(self.vaegan, True)
 
         try:
             os.makedirs("{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), exist_ok=True)
@@ -124,48 +137,36 @@ class VaeGan:
         except OSError as error:
             print("Directory '%s' can not be created")
 
+
         checkpoint = ModelsCheckpoint("{}/irun{}_ifold{}/".format(self.vaegan_save_dir,irun, ifold), self.epoch_format,self.encoder, self.decoder, self.discriminator)
         decoder_sampler = DecoderSnapshot("{}/".format(self.decode_dir))
 
         _callbacks = [checkpoint, decoder_sampler]
 
-        #self.vae = VAE(self.encoder, self.decoder)
-        # checkpoint_path = os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold, "vae_weights"))
-        #
-        # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-        #
-        #                                                  monitor='loss',
-        #                                                  save_weights_only=True,
-        #                                                  save_best_only=True,
-        #                                                  mode='auto',
-        #                                                  save_freq='epoch',
-        #                                                  verbose=1)
-
-        #callbacks = CallbackList(_callbacks, add_history=True, model=self.encoder)
-
         epochs = self.vaegan_epochs
 
-        hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=self.vaegan_batch_size, shuffle=True)
+        self.infogan = INFOGAN()
+        self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
+        hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=128, shuffle=True)
+        self.infogan.train(generator=hdf5Iterator, epochs=50000, sample_interval=100,irun=irun, ifold=ifold)
 
 
-        # self.vae.compile(optimizer=tf.keras.optimizers.Adam())
-        # self.vae.fit(hdf5Iterator, epochs=epochs, batch_size=self.vaegan_batch_size, callbacks=callbacks)
+        # steps_per_epoch = len(hdf5Iterator)
+        # img_loader = load_images(hdf5Iterator, num_child=3)
+        #
+        # dis_loader = discriminator_loader(img_loader, seed=self.seed)
+        # dec_loader = decoder_loader(img_loader, seed=self.seed)
+        # enc_loader = encoder_loader(img_loader)
+        #
+        # models = [self.discriminator_train, self.decoder_train, self.encoder_train]
+        #
+        # generators = [dis_loader, dec_loader, enc_loader]
+        #
+        # fit_models(self.vaegan, models, generators, self.vaegan_batch_size,
+        #                        steps_per_epoch=steps_per_epoch, callbacks=_callbacks,
+        #                        epochs=epochs, initial_epoch=self.initial_epoch)
 
-        steps_per_epoch = len(hdf5Iterator)
-        img_loader = load_images(hdf5Iterator, num_child=3)
-
-        dis_loader = discriminator_loader(img_loader, seed=self.seed)
-        dec_loader = decoder_loader(img_loader, seed=self.seed)
-        enc_loader = encoder_loader(img_loader)
-
-        models = [self.discriminator_train, self.decoder_train, self.encoder_train]
-
-        generators = [dis_loader, dec_loader, enc_loader]
-
-        fit_models(self.vaegan, models, generators, batch_size=self.vaegan_batch_size,
-                               steps_per_epoch=steps_per_epoch, callbacks=_callbacks,
-                               epochs=epochs, initial_epoch=self.initial_epoch)
-        return self.encoder
+        return self.infogan
 
 
 
@@ -250,19 +251,22 @@ class GraphAttnet:
         -------
         returns  a Keras model instance of the pre-trained siamese net
         """
-        encoder, decoder, discriminator = create_models()
+        #encoder, decoder, discriminator = create_models()
+
+        self.infogan = INFOGAN()
+        self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
 
         def extract_number(f):
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'encoder*'))
+        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'auxilliary*'))
         file_paths.reverse()
         file_path = (max(file_paths, key=extract_number))
 
         #file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
-        encoder.load_weights(file_path)
-        return encoder
+        self.auxilliary.load_weights(file_path)
+        return self.auxilliary
 
     def train(self,train_bags , irun, ifold,detection_model):
         """
@@ -296,13 +300,10 @@ class GraphAttnet:
 
 
         if self.mode=="vaegan":
-            if self.weight_file:
-                self.discriminator_test = self.load_siamese( irun, ifold)
-            else:
-
+            if not self.weight_file:
                 self.vaegan_net_test= VaeGan(self.args)
-                self.discriminator_test=self.vaegan_net_test.train(model_train_set,model_val_set, irun=irun, ifold=ifold)
-
+                self.infogan_test=self.vaegan_net_test.train(model_train_set,model_val_set, irun=irun, ifold=ifold)
+            self.discriminator_test = self.load_siamese(irun, ifold)
 
 
             train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,

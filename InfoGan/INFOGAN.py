@@ -172,7 +172,7 @@ class INFOGAN():
 
             # If at save interval => save generated image samples
             if epoch % sample_interval == 0:
-                self.sample_images(epoch)
+                #self.sample_images(epoch)
                 self.save_model(irun, ifold)
 
     def sample_images(self, epoch):

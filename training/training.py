@@ -33,6 +33,7 @@ from InfoGan.INFOGAN import INFOGAN
 from flushed_print import print
 import matplotlib.pyplot as plt
 
+
 class VaeGan:
     def __init__(self,args):
         """

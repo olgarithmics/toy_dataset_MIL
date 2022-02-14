@@ -8,10 +8,8 @@ from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import to_categorical
 import tensorflow.keras.backend as K
-from tensorflow.keras import callbacks as cbks
-from PIL import Image
 import matplotlib.pyplot as plt
-
+from flushed_print import print
 import numpy as np
 
 class INFOGAN():

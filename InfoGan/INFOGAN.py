@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class INFOGAN():
-    def __init__(self):
+    def __init__(self,vaegan_save_dir):
         self.img_rows = 27
         self.img_cols = 27
         self.channels = 3
@@ -27,6 +27,7 @@ class INFOGAN():
         self.wdecay = 1e-5
         self.leaky_relu_alpha=0.2
         self.n_discriminator=512
+        self.vaegan_save_dir=vaegan_save_dir
 
 
         optimizer = Adam(0.0002, 0.5)
@@ -173,7 +174,7 @@ class INFOGAN():
             # If at save interval => save generated image samples
             if epoch % sample_interval == 0:
                 #self.sample_images(epoch)
-                self.save_model(irun, ifold)
+                self.save_model(self.vaegan_save_dir,irun, ifold)
 
     def sample_images(self, epoch):
         r, c = 4, 4
@@ -195,11 +196,11 @@ class INFOGAN():
         plt.close()
 
 
-    def save_model(self, irun, ifold):
+    def save_model(self, dir,irun, ifold):
 
         def save(model, model_name):
 
-            weights_path = "infogan_weights/irun{}_ifold{}/{}_weights.hdf5".format(irun, ifold,model_name)
+            weights_path = "{}/irun{}_ifold{}/{}_weights.hdf5".format(dir,irun, ifold,model_name)
 
 
             model.save_weights(weights_path)

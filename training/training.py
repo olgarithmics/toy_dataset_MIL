@@ -145,7 +145,7 @@ class VaeGan:
 
         epochs = self.vaegan_epochs
 
-        self.infogan = INFOGAN()
+        self.infogan = INFOGAN(self.vaegan_save_dir)
         self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
         hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=128, shuffle=True)
         self.infogan.train(generator=hdf5Iterator, epochs=50000, sample_interval=100,irun=irun, ifold=ifold)

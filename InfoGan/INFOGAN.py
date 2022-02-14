@@ -29,7 +29,6 @@ class INFOGAN():
         self.n_discriminator=512
 
 
-
         optimizer = Adam(0.0002, 0.5)
         losses = ['binary_crossentropy', self.mutual_info_loss]
 
@@ -66,22 +65,19 @@ class INFOGAN():
         self.combined.compile(loss=losses,
             optimizer=optimizer)
 
-
     def build_generator(self):
 
         generator = Sequential([
             Dense(self.n_decoder, kernel_regularizer=l2(self.wdecay), kernel_initializer='he_uniform',
                   input_shape=(self.latent_dim,),
-                  name='dec_h_dense'),
-
-            LeakyReLU(self.leaky_relu_alpha),
+                  name='dec_h_dense',activation='relu'),
             Reshape(self.decode_from_shape),
 
-            Conv2DTranspose(filters=128, kernel_size=(3, 3), strides=(2, 2)),
-            LeakyReLU(self.leaky_relu_alpha),
+            Conv2D(128, (4, 4), padding='same',activation="relu"),
 
-            Conv2DTranspose(filters=36, kernel_size=(3, 3), strides=(2, 2)),
-            LeakyReLU(self.leaky_relu_alpha),
+            Conv2DTranspose(filters=128, kernel_size=(3, 3), strides=(2, 2),activation="relu"),
+
+            Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2),activation="relu"),
 
             Conv2D(3, 3, strides=(1, 1), activation='tanh', padding='same', kernel_regularizer=l2(self.wdecay),
                    kernel_initializer='he_uniform',
@@ -97,11 +93,15 @@ class INFOGAN():
 
         # Shared layers between discriminator and recognition network
         model = Sequential()
-        model.add(Conv2D(64, kernel_size=3, strides=2, input_shape=self.img_shape, padding="valid"))
+        model.add(Conv2D(64, kernel_size=4, strides=2, input_shape=self.img_shape, padding="same"))
         model.add(LeakyReLU(alpha=0.2))
 
-        model.add(Conv2D(128, kernel_size=3, strides=2, padding="valid"))
+        model.add(Conv2D(128, kernel_size=4, strides=2, padding="same"))
         model.add(LeakyReLU(alpha=0.2))
+
+        model.add(Conv2D(256, kernel_size=4, padding="same"))
+        model.add(LeakyReLU(alpha=0.2))
+
 
         model.add(Flatten())
 
@@ -109,14 +109,11 @@ class INFOGAN():
 
         # Discriminator
         validity = Dense(1, activation='sigmoid')(img_embedding)
-
         # Recognition
-        q_net = Dense(self.n_discriminator, activation='relu', name="feature descriptor")(img_embedding)
+        q_net = Dense(self.n_discriminator, activation='relu', name="feature_descriptor")(img_embedding)
         label = Dense(self.num_classes, activation='softmax')(q_net)
-
         # Return discriminator and recognition network
         return Model(img, validity), Model(img, label)
-
 
     def mutual_info_loss(self, c, c_given_x):
         """The mutual information metric we aim to minimize"""
@@ -134,7 +131,7 @@ class INFOGAN():
 
         return sampled_noise, sampled_labels
 
-    def train(self,generator, epochs,irun, ifold,sample_interval=50):
+    def train(self,generator, epochs,irun, ifold, sample_interval=50):
 
 
         for epoch in range(epochs):

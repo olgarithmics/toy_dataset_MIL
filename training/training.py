@@ -256,6 +256,10 @@ class GraphAttnet:
         self.infogan = INFOGAN()
         self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
 
+        # load model
+
+        # remove the output layer
+
         def extract_number(f):
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
@@ -266,6 +270,7 @@ class GraphAttnet:
 
         #file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
         self.auxilliary.load_weights(file_path)
+        self.auxilliary = Model(inputs=self.auxilliary.inputs, outputs=self.auxilliary.layers[-2].output)
         return self.auxilliary
 
     def train(self,train_bags , irun, ifold,detection_model):

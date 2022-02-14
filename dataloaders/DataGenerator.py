@@ -92,7 +92,7 @@ class DataGenerator(tf.keras.utils.Sequence):
         Idx = self._get_indices(batch_train[2], neighbors=self.k)
         if self.mode == "vaegan":
 
-            values = self.generate_siamese_pairs(batch_train,Idx)
+            values = self.generate_siamese_pairs(batch_train, Idx)
 
             adjacency_matrix = self.get_siamese_affinity(Idx, values)
 
@@ -103,6 +103,7 @@ class DataGenerator(tf.keras.utils.Sequence):
 
     @tf.function
     def serve(self,x):
+
         return self.trained_model(x, training=False)
 
     def generate_siamese_pairs(self, batch,Idx):
@@ -128,10 +129,12 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
-            m1, s1=self.serve(np.expand_dims(images[int(row)], axis=0))
-            m2, s2=self.serve(np.expand_dims(images[int(column)], axis=0))
-            value=distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
+            m1=self.serve(np.expand_dims(images[int(row)], axis=0))
 
+            m2=self.serve(np.expand_dims(images[int(column)], axis=0))
+
+            value=distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
+            #print ("{}-{}-{}".format(filenames[row], filenames[column], 1-value))
             values.append(1-value)
 
         return values

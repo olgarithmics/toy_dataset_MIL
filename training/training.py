@@ -149,7 +149,7 @@ class VaeGan:
         self.infogan = INFOGAN(self.vaegan_save_dir)
         self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
         hdf5Iterator = ImgIterator(np.concatenate((train_bags, val_bags)), batch_size=128, shuffle=True)
-        self.infogan.train(generator=hdf5Iterator, epochs=50000, sample_interval=100, irun=irun, ifold=ifold)
+        self.infogan.train(generator=hdf5Iterator, epochs=10000, sample_interval=100, irun=irun, ifold=ifold)
 
 
         # steps_per_epoch = len(hdf5Iterator)
@@ -167,7 +167,7 @@ class VaeGan:
         #                        steps_per_epoch=steps_per_epoch, callbacks=_callbacks,
         #                        epochs=epochs, initial_epoch=self.initial_epoch)
 
-        return self.infogan
+        return self.auxilliary
 
 
 
@@ -254,25 +254,28 @@ class GraphAttnet:
         """
         #encoder, decoder, discriminator = create_models()
 
-        self.infogan = INFOGAN(self.vaegan_save_dir)
-        self.discriminator, self.auxilliary = self.infogan.build_disk_and_q_net()
+        infogan = INFOGAN(self.vaegan_save_dir)
+        discriminator, auxilliary = infogan.build_disk_and_q_net()
 
-        # load model
-
-        # remove the output layer
 
         def extract_number(f):
             s = re.findall("\d+\.\d+", f)
             return ((s[0]) if s else -1, f)
 
-        file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'auxilliary*'))
-        file_paths.reverse()
-        file_path = (max(file_paths, key=extract_number))
+        try:
+            file_paths = glob.glob(os.path.join( "{}/irun{}_ifold{}".format(self.vaegan_save_dir,irun, ifold), 'auxilliary*'))
+            file_paths.reverse()
+            file_path = (max(file_paths, key=extract_number))
 
-        #file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
-        self.auxilliary.load_weights(file_path)
-        self.auxilliary = Model(inputs=self.auxilliary.inputs, outputs=self.auxilliary.layers[-2].output)
-        return self.auxilliary
+            #file_path =  os.path.join("{}/irun{}_ifold{}/{}.ckpt".format(self.vaegan_save_dir,irun, ifold,"vae_weights"))
+            auxilliary.load_weights(file_path)
+            auxilliary.layers.pop()
+            return auxilliary
+
+        except:
+            print("There is no weight_file for run{} fold{}".format(irun, ifold))
+            return None
+
 
     def train(self,train_bags , irun, ifold,detection_model):
         """
@@ -304,24 +307,26 @@ class GraphAttnet:
             model_train_set = BreastCancerDataset(format='.tif', patch_size=128,
                                                stride=16, augmentation=True, model=detection_model).load_bags(wsi_paths=train_bags)
 
-
         if self.mode=="vaegan":
-            if not self.weight_file:
-                self.vaegan_net_test= VaeGan(self.args)
-                self.infogan_test=self.vaegan_net_test.train(model_train_set,model_val_set, irun=irun, ifold=ifold)
-            self.discriminator_test = self.load_siamese(irun, ifold)
+            self.auxilliary_test = self.load_siamese(irun, ifold)
+
+            if self.auxilliary_test is None:
+                self.infogan_net_test = VaeGan(self.args)
+                self.auxilliary_test = self.infogan_net_test.train(model_train_set, model_val_set, irun=irun, ifold=ifold)
 
 
             train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
-                                      trained_model=self.discriminator_test,sigma=self.sigma)
+                                      trained_model=self.auxilliary_test ,sigma=self.sigma)
 
             val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
-                                    trained_model=self.discriminator_test, sigma=self.sigma)
+                                    trained_model=self.auxilliary_test ,sigma=self.sigma)
 
         else:
-            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,sigma=self.sigma)
+            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True,
+                                      mode=self.mode,sigma=self.sigma)
 
-            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,sigma=self.sigma)
+            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False,
+                                    mode=self.mode,sigma=self.sigma)
 
         os.makedirs(self.save_dir, exist_ok=True)
 

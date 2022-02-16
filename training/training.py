@@ -185,6 +185,7 @@ class GraphAttnet:
         """
         self.training=training
         self.prob = args.prob
+        self.dist = args.dist
         self.args=args
         self.arch=args.arch
         self.mode=args.mode
@@ -315,17 +316,17 @@ class GraphAttnet:
                 self.auxilliary_test = self.infogan_net_test.train(model_train_set, model_val_set, irun=irun, ifold=ifold)
 
 
-            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
+            train_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True, mode=self.mode,
                                       trained_model=self.auxilliary_test ,sigma=self.sigma)
 
-            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
+            val_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False, mode=self.mode,
                                     trained_model=self.auxilliary_test ,sigma=self.sigma)
 
         else:
-            train_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True,
+            train_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=model_train_set, k=self.k, shuffle=True,
                                       mode=self.mode,sigma=self.sigma)
 
-            val_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False,
+            val_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=model_val_set, k=self.k, shuffle=False,
                                     mode=self.mode,sigma=self.sigma)
 
         os.makedirs(self.save_dir, exist_ok=True)
@@ -452,10 +453,10 @@ class GraphAttnet:
 
         if self.mode=="vaegan":
             self.discriminator_test = self.load_siamese(irun, ifold)
-            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
+            test_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,
                                  trained_model=self.discriminator_test,sigma=self.sigma)
         else:
-            test_gen = DataGenerator(prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,sigma=self.sigma)
+            test_gen = DataGenerator(dist=self.dist,prob=self.prob,batch_size=1, data_set=test_set, k=self.k, shuffle=False, mode=self.mode,sigma=self.sigma)
 
         loss_value=[]
         test_loss_fn = BinaryCrossentropy(from_logits=False)

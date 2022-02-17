@@ -70,7 +70,7 @@ def load_images(iterator,num_child=4):
             for i in range(num_child):
                 yield batch_images
 
-def discriminator_loader(img_loader, latent_dim=256, seed=0):
+def discriminator_loader(img_loader, latent_dim=128, seed=0):
     rng = np.random.RandomState(seed)
     while True:
         x = next(img_loader)
@@ -83,7 +83,7 @@ def discriminator_loader(img_loader, latent_dim=256, seed=0):
 
         yield [x, z_p], [y_real, y_fake, y_fake]
 
-def decoder_loader(img_loader, latent_dim=256, seed=0):
+def decoder_loader(img_loader, latent_dim=128, seed=0):
     rng = np.random.RandomState(seed)
     while True:
         x = next(img_loader)

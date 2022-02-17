@@ -6,11 +6,11 @@ import numpy as np
 from PIL import Image
 
 from tensorflow.keras.callbacks import Callback
-
+import matplotlib.pyplot as plt
 
 class DecoderSnapshot(Callback):
 
-    def __init__(self, decode_dir, step_size=100, latent_dim=256, decoder_index=-2):
+    def __init__(self, decode_dir, step_size=100, latent_dim=128, decoder_index=-2):
         super().__init__()
         self._step_size = step_size
         self._steps = 0
@@ -29,7 +29,26 @@ class DecoderSnapshot(Callback):
     def on_batch_begin(self, batch, logs=None):
         self._steps += 1
         if self._steps % self._step_size == 0:
-            self.plot_images()
+            self.sample_images()
+
+
+    def sample_images(self):
+        r, c = 4, 4
+        decoder = self.model.layers[self._decoder_index]
+        filename = self.decode_dir + 'generated_%d_%d.png' % (self._epoch, self._steps)
+        fig, axs = plt.subplots(r, c)
+        for i in range(c):
+            z = np.random.normal(size=(c, self._latent_dim))
+            images = decoder.predict(z)
+            images = (images + 1.) * 127.5
+            images = np.clip(images, 0., 255.)
+            images = images.astype('uint8')
+            for j in range(r):
+                axs[j,i].imshow(images[j,:,:,:])
+                axs[j,i].axis('off')
+        fig.savefig(filename)
+        plt.close()
+
 
     def plot_images(self, samples=4):
         decoder = self.model.layers[self._decoder_index]

@@ -9,27 +9,46 @@ from tensorflow.keras.applications.resnet50 import ResNet50
 from .losses import mean_gaussian_negative_log_likelihood
 
 
-def create_models(n_channels=3, recon_depth=2, wdecay=1e-5):
+def create_models(n_channels=3, recon_depth=5, wdecay=1e-5):
 
     image_shape = (27, 27, n_channels)
-    n_discriminator = 256
-    latent_dim = 256
-    decode_from_shape = (6, 6, 64)
+    n_discriminator = 512
+    latent_dim = 128
+    decode_from_shape = (6, 6, 512)
     n_decoder = np.prod(decode_from_shape)
+    n_encoder = 1024
+    leaky_relu_alpha = 0.2
+    bn_mom = 0.9
+    bn_eps = 1e-6
+
+    def conv_block(x, filters, leaky=True, transpose=False, name=''):
+        conv = Conv2DTranspose if transpose else Conv2D
+        activation = LeakyReLU(leaky_relu_alpha) if leaky else Activation('relu')
+        layers = [
+            conv(filters, 5, strides=2, padding='same', kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform',
+                 name=name + 'conv'),
+            BatchNormalization(momentum=bn_mom, epsilon=bn_eps, name=name + 'bn'),
+            activation
+        ]
+        if x is None:
+            return layers
+        for layer in layers:
+            x = layer(x)
+        return x
 
     # Encoder
     def create_encoder():
 
         inputs = Input(shape=image_shape, name='enc_input')
-        x = Conv2D(filters=32, kernel_size=3, strides=(2, 2))(inputs)
-        x = LeakyReLU(alpha=0.2)(x)
-        x = Conv2D(filters=64, kernel_size=3, strides=(2, 2))(x)
+        x = Conv2D(filters=128, kernel_size=3, strides=(2, 2))(inputs)
+        x = LeakyReLU(leaky_relu_alpha)(x)
 
-        x = LeakyReLU(alpha=0.2)(x)
-        x = BatchNormalization(momentum=0.8)(x)
+        x = Conv2D(filters=64, kernel_size=3, strides=(2, 2))(x)
+        x = LeakyReLU(leaky_relu_alpha)(x)
 
         x = Flatten()(x)
-        x = Dense(latent_dim, name='x_mean')(x)
+        x = Dense(n_encoder, name='x_mean')(x)
+        x = LeakyReLU(leaky_relu_alpha)(x)
 
         z_mean = Dense(latent_dim, name='z_mean', kernel_initializer='he_uniform')(x)
         z_log_var = Dense(latent_dim, name='z_log_var', kernel_initializer='he_uniform')(x)
@@ -37,37 +56,40 @@ def create_models(n_channels=3, recon_depth=2, wdecay=1e-5):
         return Model(inputs, [z_mean, z_log_var], name='encoder')
 
     decoder = Sequential([
-        Dense(n_decoder, kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform', input_shape=(latent_dim,),
-              name='dec_h_dense'),
+        Dense(n_decoder, kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform',
+              input_shape=(latent_dim,),
+              name='dec_h_dense', activation='relu'),
         Reshape(decode_from_shape),
 
-        Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), padding='valid'),
-        LeakyReLU(alpha=0.2),
-        BatchNormalization(momentum=0.8),
+        Conv2D(128, (4, 4), padding='same', activation="relu"),
 
-        Conv2DTranspose(filters=32, kernel_size=(3, 3), strides=(2, 2), padding='valid'),
-        LeakyReLU(alpha=0.2),
-        BatchNormalization(momentum=0.8),
+        Conv2DTranspose(filters=128, kernel_size=(3, 3), strides=(2, 2), activation="relu"),
 
-        Conv2D(3, 3, activation='tanh', padding='same', kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform',
+        Conv2DTranspose(filters=64, kernel_size=(3, 3), strides=(2, 2), activation="relu"),
+
+        Conv2D(3, 3, strides=(1, 1), activation='tanh', padding='same', kernel_regularizer=l2(wdecay),
+               kernel_initializer='he_uniform',
                name='dec_output')
     ], name='decoder')
 
     def create_discriminator():
+
         x = Input(shape=image_shape, name='dis_input')
 
-        layers = [
-            Conv2D(filters=32, kernel_size=(3, 3), strides=2, padding='valid'),
-            LeakyReLU(alpha=0.2),
+        # Shared layers between discriminator and recognition network
 
-            Conv2D(filters=64, kernel_size=(3, 3), strides=2, padding='valid'),
-            LeakyReLU(alpha=0.2),
-            Dropout(0.5),
+        layers=[Conv2D(64, kernel_size=4, strides=2, input_shape=image_shape, padding="same"),
+        LeakyReLU(alpha=0.2),
 
-            Flatten(),
-            Dense(n_discriminator, kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform', name='dis_dense'),
+        Conv2D(128, kernel_size=4, strides=2, padding="same"),
+        LeakyReLU(alpha=0.2),
 
-            Dense(1, activation='sigmoid', kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform', name='dis_output')
+        Conv2D(256, kernel_size=4, padding="same"),
+        LeakyReLU(alpha=0.2),
+
+        Flatten(),
+        Dense(1, activation='sigmoid', kernel_regularizer=l2(wdecay), kernel_initializer='he_uniform',
+                  name='dis_output')
         ]
 
         y = x
@@ -120,7 +142,6 @@ def build_graph(encoder, decoder, discriminator, recon_vs_gan_weight=1e-6):
 
     x_tilde = decoder(z)
     x_p = decoder(z_p)
-
 
     dis_x, dis_feat = discriminator(x)
     dis_x_tilde, dis_feat_tilde = discriminator(x_tilde)

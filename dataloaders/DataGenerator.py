@@ -130,11 +130,14 @@ class DataGenerator(tf.keras.utils.Sequence):
         rows = np.concatenate(np.asarray(rows)).ravel()
 
         for row, column in zip(rows, columns):
-            m1=self.serve(np.expand_dims(images[int(row)], axis=0))
-            m2=self.serve(np.expand_dims(images[int(column)], axis=0))
+            m1,s1=self.serve(np.expand_dims(images[int(row)], axis=0))
+            m2,s2=self.serve(np.expand_dims(images[int(column)], axis=0))
+
             if self.dist=="cosine":
                 value=distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "cosine")[0][0]
                 values.append(1-value)
+                # euclidean = distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "euclidean")[0][0]
+                # print("{}-{}-{}".format(filenames[row], filenames[column], np.exp(-euclidean)))
             elif self.dist=="euclidean":
                 value = distance.cdist(m1.numpy().reshape(1, -1), m2.numpy().reshape(1, -1), "euclidean")[0][0]
                 values.append(np.exp(-value))
@@ -209,8 +212,6 @@ class DataGenerator(tf.keras.utils.Sequence):
         columns = Idx.ravel()
 
         affinity[rows, columns] = values
-
-        affinity=np.where(affinity>self.prob, affinity, 0)
 
         np.fill_diagonal(affinity, 1)
 
